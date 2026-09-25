@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'">
+<title>Venise</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><path d="M21 3v5h-5"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4l2 2.5h9A1.5 1.5 0 0 1 21 9v8.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8z"/><path d="M14 3v5h5"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3v6M12 15v6M3 12h6M15 12h6"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 4h11l3 3v12.5a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="m9 7-5 5 5 5M15 7l5 5-5 5"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+    <symbol id="i-syringe" viewBox="0 0 24 24"><path d="m18 2 4 4M16 4l4 4M19 5l-9.5 9.5M14 5l5 5-9 9H5v-5z"/><path d="m8 11 2 2M11 8l2 2M5 19l-3 3"/></symbol>
+    <symbol id="i-terminal" viewBox="0 0 24 24"><path d="m4 7 5 5-5 5M12 18h8"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="1.5"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-min" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
+    <symbol id="i-max" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></symbol>
+    <symbol id="i-restore" viewBox="0 0 24 24"><rect x="5" y="9" width="10" height="10" rx="1"/><path d="M9 9V6a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-3"/></symbol>
+    <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M3 7h4l10 10h4M3 17h4l3-3M14 10l3-3h4M18 4l3 3-3 3M18 14l3 3-3 3"/></symbol>
+  </defs>
+</svg>
+
+<div class="window">
+  <header class="titlebar">
+    <button class="press-me" id="pressMe">Press me</button>
+    <div class="drag"></div>
+    <div class="wincontrols">
+      <button id="winMin" aria-label="Minimize"><svg><use href="#i-min"/></svg></button>
+      <button id="winMax" aria-label="Maximize"><svg><use href="#i-max"/></svg></button>
+      <button id="winClose" class="close" aria-label="Close"><svg><use href="#i-x"/></svg></button>
+    </div>
+  </header>
+
+  <div class="body">
+    <aside class="sidebar">
+      <div class="side-head">
+        <span class="label">Scripts</span>
+        <div class="side-tools">
+          <button id="refreshBtn" class="icon-btn" title="Refresh scripts folder"><svg><use href="#i-refresh"/></svg></button>
+          <button id="folderBtn" class="icon-btn" title="Open scripts folder"><svg><use href="#i-folder"/></svg></button>
+        </div>
+      </div>
+      <label class="search">
+        <svg><use href="#i-search"/></svg>
+        <input id="search" placeholder="Search scripts" autocomplete="off" spellcheck="false">
+      </label>
+      <div class="label section">Scripts folder</div>
+      <div class="list" id="folderList"></div>
+      <div class="label section">Examples</div>
+      <div class="list" id="exampleList"></div>
+    </aside>
+
+    <main class="main">
+      <div class="tabs" id="tabs"></div>
+
+      <div class="work">
+        <div class="editor" id="editor">
+          <pre class="gutter" id="gutter" aria-hidden="true"></pre>
+          <div class="code">
+            <div class="curline" id="curline"></div>
+            <pre class="hl" id="hl" aria-hidden="true"></pre>
+            <textarea id="ed" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="Lua script"></textarea>
+          </div>
+        </div>
+
+        <section class="game" id="game" hidden>
+          <div class="game-head"><span class="label">Game</span><span id="gameName"></span></div>
+          <canvas id="screen" width="128" height="128" tabindex="0" aria-label="Game screen. Arrow keys to move."></canvas>
+          <div class="game-meta"><span id="fps">0 fps</span><span id="clock">0.0s</span></div>
+          <div class="pad">
+            <button data-b="0" aria-label="Left">◀</button><button data-b="2" aria-label="Up">▲</button><button data-b="3" aria-label="Down">▼</button><button data-b="1" aria-label="Right">▶</button><button data-b="4">Z</button><button data-b="5">X</button>
+          </div>
+        </section>
+      </div>
+
+      <section class="output" id="output">
+        <div class="out-head">
+          <div class="out-title"><svg><use href="#i-terminal"/></svg>Output</div>
+          <div class="out-tools">
+            <button id="copyOut" class="icon-btn" title="Copy output"><svg><use href="#i-copy"/></svg></button>
+            <button id="clearOut" class="icon-btn" title="Clear output"><svg><use href="#i-trash"/></svg></button>
+            <button id="toggleOut" class="icon-btn" title="Collapse output"><svg><use href="#i-chevron"/></svg></button>
+          </div>
+        </div>
+        <div class="log" id="log"></div>
+      </section>
+
+      <div class="actions">
+        <button class="btn primary" id="execBtn" title="Run the script in the injected game (Ctrl+Enter)"><svg><use href="#i-play"/></svg>Execute</button>
+        <button class="btn" id="clearBtn"><svg><use href="#i-trash"/></svg>Clear</button>
+        <button class="btn" id="openBtn"><svg><use href="#i-folder"/></svg>Open File</button>
+        <button class="btn" id="saveBtn" title="Save (Ctrl+S)"><svg><use href="#i-save"/></svg>Save File</button>
+        <button class="btn" id="compileBtn" title="Check the script for errors"><svg><use href="#i-code"/></svg>Compile</button>
+        <div class="spacer"></div>
+        <button class="btn square" id="themeBtn" title="Switch light / dark"><svg><use href="#i-sun"/></svg></button>
+        <button class="btn inject" id="injectBtn" title="Start the game and attach the executor"><svg><use href="#i-syringe"/></svg><span>Inject</span></button>
+      </div>
+    </main>
+  </div>
+
+  <footer class="statusbar">
+    <span id="runtime">Lua 5.3 · Emulator runtime</span>
+    <div class="spacer"></div>
+    <span id="problems">No problems</span>
+    <span id="cursor">Ln 1, Col 1</span>
+    <span id="fileName">Script.lua</span>
+  </footer>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head">
+      <span id="modalTitle">Random image</span>
+      <button class="icon-btn" id="modalClose" aria-label="Close"><svg><use href="#i-x"/></svg></button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot">
+      <button class="btn" id="imgFolderBtn"><svg><use href="#i-folder"/></svg>Open images folder</button>
+      <div class="spacer"></div>
+      <button class="btn primary" id="againBtn"><svg><use href="#i-shuffle"/></svg>Another one</button>
+    </div>
+  </div>
+</div>
+
+<script src="../node_modules/fengari-web/dist/fengari-web.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
