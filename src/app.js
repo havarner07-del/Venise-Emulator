@@ -118,6 +118,40 @@ local r = getruntimeinfo()
 print("runtime", r.lua, "on", r.os, r.arch)
 print("neutralino", r.neutralino, "fps", r.fps, "uptime", r.uptime)
 return w.port` },
+  { name: "Multiplayer.lua", code:
+`-- Plays Coin Run with other people through a Venise server.
+-- Start one with: node server/venise-server.js   (it prints its address)
+-- Everyone connects to that address, then presses Inject and executes this script.
+net.connect("localhost", "player" .. math.random(100, 999), "coinrun")
+others = {}
+
+function _connected(id, name, room)
+  for _, p in ipairs(net.peers()) do others[p.id] = { name = p.name, x = 60, y = 104 } end
+end
+function _joined(id, name) others[id] = { name = name, x = 60, y = 104 } print(name, "joined") end
+function _left(id, name) others[id] = nil print(name, "left") end
+function _message(from, channel, data)
+  local o = others[from]
+  if channel == "pos" and o then o.x, o.y = data.x, data.y end
+end
+
+local base_update = _update
+function _update()
+  base_update()
+  if t % 2 == 0 then net.send("pos", { x = player.x, y = player.y }) end
+  -- the room's high score is shared state every player can read
+  if score > (net.get("best") or 0) then net.set("best", score) end
+end
+
+local base_draw = _draw
+function _draw()
+  base_draw()
+  for _, o in pairs(others) do
+    rect(o.x, o.y, o.x + 7, o.y + 7, 14)
+    text(o.name, o.x - 8, o.y - 8, 6)
+  end
+  text("BEST " .. (net.get("best") or 0), 3, 11, 10)
+end` },
   { name: "Inspect.lua", code:
 `-- Lists every value in the player table
 for k, v in pairs(player) do
@@ -209,7 +243,7 @@ function closeTab(id) {
 /* ---------------- editor ---------------- */
 const KW = new Set("and break do else elseif end for function goto if in local not or repeat return then until while".split(" "));
 const CONST = new Set(["true", "false", "nil"]);
-const BUILTIN = new Set("print pairs ipairs type tostring tonumber select next error assert pcall xpcall require setmetatable getmetatable rawget rawset math string table os coroutine utf8 cls pset line rect rectfill circfill text btn time rnd getwindowinfo getruntimeinfo self".split(" "));
+const BUILTIN = new Set("print pairs ipairs type tostring tonumber select next error assert pcall xpcall require setmetatable getmetatable rawget rawset math string table os coroutine utf8 cls pset line rect rectfill circfill text btn time rnd getwindowinfo getruntimeinfo net self".split(" "));
 const TOKEN = /--\[(=*)\[[\s\S]*?(?:\]\1\]|$)|--[^\n]*|\[(=*)\[[\s\S]*?(?:\]\2\]|$)|"(?:\\.|[^"\\\n])*"?|'(?:\\.|[^'\\\n])*'?|\b0[xX][\da-fA-F]+\b|\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b|[A-Za-z_]\w*/g;
 const CALL = /\s*[({"']/y;
 const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
@@ -372,6 +406,7 @@ const PAL = ["#000000", "#1d2b53", "#7e2553", "#008751", "#ab5236", "#5f574f", "
              "#ff004d", "#ffa300", "#ffec27", "#00e436", "#29adff", "#83769c", "#ff77a8", "#ffccaa"];
 const cv = $("#screen"), g = cv.getContext("2d");
 const pressed = [false, false, false, false, false, false];
+const net = new window.VeniseNet();
 let L = null, running = false, raf = 0, deadline = 0, startTime = 0, gameName = null, currentFps = 0;
 
 const col = c => PAL[((Math.floor(c) % 16) + 16) % 16];
@@ -435,14 +470,106 @@ function registerApi(L) {
   reg("rnd", L => { lua.lua_pushnumber(L, Math.random() * num(L, 1, 1)); return 1; });
   reg("getwindowinfo", L => { pushValue(L, luaWindowInfo()); return 1; });
   reg("getruntimeinfo", L => { pushValue(L, luaRuntimeInfo()); return 1; });
+  registerNet(L);
 }
 
-// Pushes a JS value onto the Lua stack; objects become tables, null becomes nil.
+// The `net` table: multiplayer through a Venise server (server/venise-server.js, docs/PROTOCOL.md).
+// Things that happen on the network reach the game through callbacks, called before each _update:
+//   _connected(id, name, room)  _joined(id, name)  _left(id, name, reason)
+//   _message(from, channel, data, private)  _state(key, value, from)
+//   _disconnected(reason)  _neterror(code, text)
+const checkString = (L, i) => { lauxlib.luaL_checkstring(L, i); return lua.lua_tojsstring(L, i); };
+function registerNet(L) {
+  const fns = {
+    connect(L) {
+      const address = checkString(L, 1);
+      const name = lua.lua_isnoneornil(L, 2) ? "player" : jsString(L, 2);
+      const room = lua.lua_isnoneornil(L, 3) ? "lobby" : jsString(L, 3);
+      lua.lua_pushboolean(L, net.connect(address, { name, room }));
+      return 1;
+    },
+    disconnect() { net.disconnect(); return 0; },
+    send(L) {
+      const ch = checkString(L, 1);
+      const data = toJs(L, 2);
+      const to = lua.lua_isnoneornil(L, 3) ? null : lauxlib.luaL_checkinteger(L, 3);
+      lua.lua_pushboolean(L, net.message(ch, data, to));
+      return 1;
+    },
+    set(L) {
+      const key = checkString(L, 1);
+      lua.lua_pushboolean(L, net.set(key, toJs(L, 2)));
+      return 1;
+    },
+    get(L) {
+      const key = checkString(L, 1);
+      pushValue(L, net.state.get(key));
+      return 1;
+    },
+    state(L) { pushValue(L, Object.fromEntries(net.state)); return 1; },
+    peers(L) { pushValue(L, [...net.peers].map(([id, name]) => ({ id, name }))); return 1; },
+    id(L) { pushValue(L, net.id); return 1; },
+    status(L) {
+      pushValue(L, { status: net.status, id: net.id, name: net.name, room: net.room, url: net.url,
+                     ping: net.ping, players: net.status === "open" ? net.peers.size + 1 : 0 });
+      return 1;
+    },
+  };
+  lua.lua_createtable(L, 0, Object.keys(fns).length);
+  for (const [name, fn] of Object.entries(fns)) {
+    lua.lua_pushjsfunction(L, fn);
+    lua.lua_setfield(L, -2, S(name));
+  }
+  lua.lua_setglobal(L, S("net"));
+}
+
+// Reads a Lua value as JSON-ready JS. Tables with keys 1..n become arrays, other tables objects.
+function toJs(L, i, depth = 0) {
+  i = lua.lua_absindex(L, i);
+  switch (lua.lua_type(L, i)) {
+    case lua.LUA_TNONE:
+    case lua.LUA_TNIL: return null;
+    case lua.LUA_TBOOLEAN: return lua.lua_toboolean(L, i);
+    case lua.LUA_TNUMBER: {
+      const n = lua.lua_tonumber(L, i);
+      if (!Number.isFinite(n)) lauxlib.luaL_error(L, S("can't send inf or nan over the network"));
+      return n;
+    }
+    case lua.LUA_TSTRING: return lua.lua_tojsstring(L, i);
+    case lua.LUA_TTABLE: {
+      if (depth >= 16) lauxlib.luaL_error(L, S("table is nested too deeply to send (a loop?)"));
+      lauxlib.luaL_checkstack(L, 3, S("table is nested too deeply to send"));
+      const entries = [];
+      lua.lua_pushnil(L);
+      while (lua.lua_next(L, i)) {
+        const kt = lua.lua_type(L, -2);
+        if (kt !== lua.LUA_TNUMBER && kt !== lua.LUA_TSTRING) lauxlib.luaL_error(L, S("only string and number table keys can be sent"));
+        const k = kt === lua.LUA_TNUMBER ? lua.lua_tonumber(L, -2) : lua.lua_tojsstring(L, -2);
+        entries.push([k, toJs(L, -1, depth + 1)]);
+        lua.lua_pop(L, 1);
+      }
+      const n = entries.length;
+      if (n && entries.every(([k]) => Number.isInteger(k) && k >= 1 && k <= n)) {
+        const arr = new Array(n);
+        for (const [k, v] of entries) arr[k - 1] = v;
+        return arr;
+      }
+      return Object.fromEntries(entries.map(([k, v]) => [String(k), v]));
+    }
+    default:
+      return lauxlib.luaL_error(L, S(`can't send a ${F.to_jsstring(lauxlib.luaL_typename(L, i))} over the network`));
+  }
+}
+
+// Pushes a JS value onto the Lua stack; arrays become 1-based tables, objects tables, null nil.
 function pushValue(L, v) {
   if (v === null || v === undefined) lua.lua_pushnil(L);
   else if (typeof v === "boolean") lua.lua_pushboolean(L, v);
   else if (typeof v === "number") Number.isInteger(v) ? lua.lua_pushinteger(L, v) : lua.lua_pushnumber(L, v);
-  else if (typeof v === "object") {
+  else if (Array.isArray(v)) {
+    lua.lua_createtable(L, v.length, 0);
+    v.forEach((val, i) => { pushValue(L, val); lua.lua_rawseti(L, -2, i + 1); });
+  } else if (typeof v === "object") {
     lua.lua_createtable(L, 0, Object.keys(v).length);
     for (const [k, val] of Object.entries(v)) {
       if (val === null || val === undefined) continue;
@@ -462,10 +589,11 @@ function runChunk(code, name, limitMs) {
   lua.lua_settop(L, top);
   return { ok: true, results: out };
 }
-function callGlobal(name, limitMs) {
-  if (lua.lua_getglobal(L, S(name)) !== lua.LUA_TFUNCTION) { lua.lua_pop(L, 1); return { ok: true }; }
+function callGlobal(name, limitMs, args = []) {
+  if (lua.lua_getglobal(L, S(name)) !== lua.LUA_TFUNCTION) { lua.lua_pop(L, 1); return { ok: true, missing: true }; }
+  for (const a of args) pushValue(L, a);
   deadline = performance.now() + limitMs;
-  if (lua.lua_pcall(L, 0, 0, 0) !== lua.LUA_OK) return { ok: false, msg: popError(L) };
+  if (lua.lua_pcall(L, args.length, 0, 0) !== lua.LUA_OK) return { ok: false, msg: popError(L) };
   return { ok: true };
 }
 
@@ -517,6 +645,7 @@ function stop() { running = false; cancelAnimationFrame(raf); }
 async function inject() {
   if (!F) { log("err", "The Lua runtime (src/vendor/fengari-web.js) is missing. Reinstall Venise."); return; }
   stop();
+  net.disconnect();
   const custom = await api.loadGame();
   const game = custom || { name: "Coin Run", code: DEMO_GAME };
   gameName = game.name;
@@ -541,12 +670,12 @@ async function inject() {
   cv.focus({ preventScroll: true });
 }
 function detach() {
-  stop(); L = null;
+  stop(); net.disconnect(); L = null;
   setInjected(false);
   log("sys", "Detached. The game VM was closed.");
 }
 function crash(where, msg) {
-  stop(); L = null;
+  stop(); net.disconnect(); L = null;
   setInjected(false, "crashed");
   g.fillStyle = PAL[1]; g.fillRect(0, 0, 128, 128);
   g.fillStyle = PAL[8]; g.font = "8px Consolas, monospace"; g.textAlign = "center"; g.textBaseline = "top";
@@ -568,6 +697,20 @@ function execute() {
 }
 $("#execBtn").onclick = execute;
 
+/* ---------------- network events ---------------- */
+// Hands queued network events to the game's callbacks (_message, _joined, ...). Events without a
+// callback are only logged, so a game that ignores networking doesn't have to define any of them.
+function pumpNet() {
+  for (const { type, args } of net.drain()) {
+    const r = callGlobal("_" + type, 120, args);
+    if (!r.ok) return { ok: false, where: "_" + type, msg: r.msg };
+    if (type === "connected") log("ok", `Connected to ${net.url} as ${args[1]} (#${args[0]}) in room ${args[2]}.`);
+    else if (type === "disconnected") log("sys", "Disconnected: " + args[0]);
+    else if (type === "neterror" && r.missing) log("warn", `Server error (${args[0]}): ${args[1]}`);
+  }
+  return { ok: true };
+}
+
 /* ---------------- game loop ---------------- */
 const STEP = 1000 / 30;
 let last = 0, acc = 0, draws = 0, fpsT = 0;
@@ -575,6 +718,8 @@ function frame(now) {
   if (!running) return;
   raf = requestAnimationFrame(frame);
   acc += Math.min(now - last, 250); last = now;
+  const n = pumpNet();
+  if (!n.ok) return crash(n.where, n.msg);
   while (acc >= STEP) {
     acc -= STEP;
     const u = callGlobal("_update", 120);
@@ -718,6 +863,14 @@ function infoSections() {
       ["Injected", running ? `Yes, into ${gameName}` : "No", running],
       ["Frame rate", running ? `${currentFps} fps` : null],
       ["Uptime", `${uptime().toFixed(1)} s`],
+    ]],
+    ["Network", [
+      ["Status", net.status === "open" ? "Connected" : net.status === "connecting" ? "Connecting" : "Not connected", net.status === "open"],
+      ["Server", net.url],
+      ["Room", net.room],
+      ["Player", net.id ? `${net.name} (#${net.id})` : null],
+      ["Players in room", net.status === "open" ? net.peers.size + 1 : null],
+      ["Ping", net.ping !== null ? net.ping + " ms" : null],
     ]],
     ["Folders", [
       ["App", p.app],

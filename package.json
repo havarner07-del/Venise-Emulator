@@ -7,7 +7,9 @@
   "scripts": {
     "setup": "neu update",
     "start": "neu run",
-    "build": "neu build --release && node tools/package.js"
+    "build": "neu build --release && node tools/package.js",
+    "server": "node server/venise-server.js",
+    "test": "node server/test.js"
   },
   "devDependencies": {
     "@neutralinojs/neu": "^11.7.2"

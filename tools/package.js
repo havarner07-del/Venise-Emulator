@@ -7,8 +7,9 @@
 //     Data/Scripts/       <- your .lua scripts
 //     Data/Images/        <- pictures for the "Press me" button
 //     Data/Game/          <- put a game here as main.lua
+//     Server/             <- the multiplayer server (run with Node.js)
 //
-// Only Venise.exe, resources.neu and README.txt are replaced. Nothing you put in Data is touched.
+// Only Venise.exe, resources.neu, README.txt and Server/ are replaced. Nothing you put in Data is touched.
 const fs = require("fs");
 const path = require("path");
 
@@ -40,6 +41,8 @@ for (const d of ["Data/Scripts", "Data/Images", "Data/Game"]) fs.mkdirSync(path.
 
 fs.copyFileSync(exe, path.join(out, "Venise.exe"));
 fs.copyFileSync(res, path.join(out, "resources.neu"));
+fs.mkdirSync(path.join(out, "Server"), { recursive: true });
+fs.copyFileSync(path.join(root, "server", "venise-server.js"), path.join(out, "Server", "venise-server.js"));
 
 for (const f of fs.readdirSync(path.join(root, "scripts"))) {
   const target = path.join(out, "Data", "Scripts", f);
@@ -62,7 +65,10 @@ fs.writeFileSync(path.join(out, "README.txt"),
   "For a desktop icon: right-click Venise.exe > Send to > Desktop (create shortcut).\r\n\r\n" +
   "Data\\Scripts  your scripts (they show in the sidebar)\r\n" +
   "Data\\Images   pictures for the Press me button\r\n" +
-  "Data\\Game     your game as main.lua\r\n\r\n" +
+  "Data\\Game     your game as main.lua\r\n" +
+  "Server         the multiplayer server\r\n\r\n" +
+  "Multiplayer: install Node.js, then run  node Server\\venise-server.js\r\n" +
+  "Players connect to the address it prints (see the Multiplayer.lua example).\r\n\r\n" +
   "If Windows shows \"Windows protected your PC\", click More info > Run anyway.\r\n" +
   "Venise needs Microsoft Edge WebView2, which comes with Windows 10 and 11.\r\n");
 
