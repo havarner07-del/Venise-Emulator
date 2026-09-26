@@ -30,6 +30,8 @@ If Windows shows "Windows protected your PC", click **More info → Run anyway**
 2. **Start window:** **Open recent** lists the scripts you've opened or saved. **Get started** offers: open a script, create a new script, inject into a game, or open the Data folder. **Continue without code** goes straight to the editor.
 3. **Editor:** the full Venise window. The home button next to **Press me** takes you back to the Start window.
 
+The Start window also has a **Launch Roblox** button. It opens Roblox the normal way, through Roblox's own `roblox-player:` launcher (the same one the Play button on roblox.com uses), so Roblox updates itself as usual. Venise only asks Windows to start it and doesn't touch the running app. If nothing happens, install Roblox from roblox.com first.
+
 ## Using it
 
 | Control | What it does |

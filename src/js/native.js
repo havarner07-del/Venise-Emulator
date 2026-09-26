@@ -125,6 +125,34 @@
       else await N.os.open("file://" + dir);
     },
 
+    // Launch an external app the normal way, like clicking its shortcut. Nothing is injected or read
+    // from the launched app; Venise just asks Windows to start it and then leaves it alone.
+    //   openApp({ uri: "roblox-player:1" })  -> starts Roblox through its own launcher (it auto-updates)
+    //   openApp({ path: "C:/Path/App.exe" }) -> starts that executable
+    async openApp({ uri, path } = {}) {
+      try {
+        if (uri) {
+          // A registered URL protocol (e.g. roblox-player:) — Windows hands it to the app that owns it.
+          if (window.NL_OS === "Windows") await N.os.execCommand(`cmd /c start "" "${uri}"`, { background: true });
+          else await N.os.open(uri);
+          return { ok: true, launched: uri };
+        }
+        if (path) {
+          const exe = winPath(path);
+          if (window.NL_OS === "Windows") {
+            const dir = exe.slice(0, Math.max(exe.lastIndexOf("\\"), 0));
+            await N.os.execCommand(`cmd /c start "" /d "${dir}" "${exe}"`, { background: true });
+          } else {
+            await N.os.execCommand(`"${exe}" &`, { background: true });
+          }
+          return { ok: true, launched: exe };
+        }
+        return { ok: false, error: "Nothing to launch" };
+      } catch (err) {
+        return { ok: false, error: (err && err.message) || String(err) };
+      }
+    },
+
     // Details about this window and the runtime behind it (shown in Runtime info and returned to Lua).
     async info() {
       const [size, pos, isMax, mem] = await Promise.all([

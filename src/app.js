@@ -15,6 +15,7 @@ const api = window.venise || {
   randomImage: async () => ({ folder: "images", image: null }),
   loadGame: async () => null,
   openFolder: async () => {},
+  openApp: async () => ({ ok: false, error: "Launching apps needs the desktop app." }),
   launchFiles: [],
   info: async () => ({
     window: { title: document.title, width: innerWidth, height: innerHeight, x: screenX, y: screenY, maximized: false },
@@ -861,6 +862,13 @@ $("#actInject").onclick = async () => {
   if (!running) inject();
 };
 $("#actData").onclick = () => api.openFolder("data");
+$("#actRoblox").onclick = async () => {
+  // "roblox-player:" is Roblox's own launch protocol — the same one the Play button on roblox.com uses.
+  const r = await api.openApp({ uri: "roblox-player:1+launchmode:app" });
+  await showView("ide");
+  if (r.ok) log("ok", "Asked Windows to open Roblox. If nothing happens, install Roblox from roblox.com first.");
+  else log("err", "Couldn't launch Roblox: " + r.error);
+};
 $("#actContinue").onclick = () => showView("ide");
 $("#homeBtn").onclick = () => showView("start");
 
