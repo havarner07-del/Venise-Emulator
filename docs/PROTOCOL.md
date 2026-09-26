@@ -232,6 +232,26 @@ server → alice   {"t":"set","from":2,"key":"best","value":3}
 server → bob     {"t":"set","from":2,"key":"best","value":3}
 ```
 
+## Watching the traffic
+
+Because every frame is plain-text JSON, you can read the whole conversation without a packet sniffer. Start the server with `--log-frames` and it prints each frame in and out; give it a file name to record to that file instead of the console:
+
+```
+node server/venise-server.js --log-frames            # to the console
+node server/venise-server.js --log-frames frames.log # to a file you choose
+```
+
+Each line is a timestamp, `→` for a frame from a client or `←` for one to a client, the player, and the JSON:
+
+```
+2026-09-26T01:04:48.680Z → (127.0.0.1) {"t":"hello","v":1,"name":"alice","room":"demo"}
+2026-09-26T01:04:48.681Z ← #1 alice {"t":"welcome","v":1,"id":1,"name":"alice","room":"demo","peers":[],"state":{}}
+2026-09-26T01:04:48.682Z → #1 alice {"t":"set","key":"best","value":7}
+2026-09-26T01:04:48.682Z ← #1 alice {"t":"set","from":1,"key":"best","value":7}
+```
+
+The browser's DevTools **Network → WS → Messages** tab shows the same frames from the client's side. To capture at the packet level, run Wireshark on the loopback interface with the filter `tcp.port == 7777` and **Decode As → WebSocket**; it unmasks the client frames for you.
+
 ## Security
 
 The server has no accounts or passwords, and messages aren't encrypted over `ws://`. Anyone who can reach the port can join any room and send anything. Run it on your own computer or local network, and don't open the port to the internet unless you put it behind something that adds TLS (`wss://`) and access control. Games should treat everything they receive as untrusted input.

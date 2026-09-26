@@ -8,6 +8,7 @@
 const http = require("http");
 const crypto = require("crypto");
 const os = require("os");
+const fs = require("fs");
 
 const PROTOCOL_VERSION = 1;
 const LIMITS = {
@@ -153,9 +154,23 @@ function uniqueName(room, wanted) {
   return name;
 }
 
+// Frame logging: off by default. --log-frames [file] turns it on, so you can watch or record the
+// whole conversation (Venise's protocol is plain JSON) without a packet sniffer. Only the messages
+// this server sends and receives are logged; there is nothing else on the wire to capture.
+let frameLog = null;
+function configureFrameLog(target) {
+  const write = target && target !== "-"
+    ? (() => { const s = fs.createWriteStream(target, { flags: "a" }); return line => s.write(line + "\n"); })()
+    : line => process.stdout.write(line + "\n");
+  frameLog = (dir, client, text) => {
+    const who = client.id ? `#${client.id} ${client.name}` : `(${client.address})`;
+    write(`${new Date().toISOString()} ${dir === "in" ? "→" : "←"} ${who} ${text}`);
+  };
+}
+
 function broadcast(room, msg, except) {
   const text = JSON.stringify(msg);
-  for (const c of room.clients.values()) if (c !== except) c.ws.sendText(text);
+  for (const c of room.clients.values()) if (c !== except) c.deliver(text);
 }
 
 class Client {
@@ -173,7 +188,9 @@ class Client {
     this.helloTimer = setTimeout(() => this.fail("bad_hello", "send hello first", true), LIMITS.helloTimeoutMs);
   }
 
-  send(msg) { this.ws.sendText(JSON.stringify(msg)); }
+  send(msg) { this.deliver(JSON.stringify(msg)); }
+  // Single outgoing choke point, so frame logging sees every server → client frame.
+  deliver(text) { if (frameLog) frameLog("out", this, text); this.ws.sendText(text); }
 
   // Sends an error. Fatal errors also close the connection.
   fail(code, text, fatal) {
@@ -191,6 +208,7 @@ class Client {
   }
 
   receive(text) {
+    if (frameLog) frameLog("in", this, text);
     let m;
     try { m = JSON.parse(text); } catch { return this.fail("bad_json", "messages must be JSON objects"); }
     if (!m || typeof m !== "object" || Array.isArray(m) || typeof m.t !== "string") return this.fail("bad_json", "messages must be JSON objects with a \"t\" field");
@@ -309,10 +327,17 @@ if (require.main === module) {
   const arg = (name, fallback) => { const i = process.argv.indexOf("--" + name); return i > 0 ? process.argv[i + 1] : fallback; };
   const port = Number(arg("port", process.env.PORT || 7777));
   const host = arg("host", "0.0.0.0");
+  // --log-frames writes every frame in and out; the optional next word is a file (else the console).
+  const li = process.argv.indexOf("--log-frames");
+  if (li >= 0) {
+    const next = process.argv[li + 1];
+    configureFrameLog(next && !next.startsWith("--") ? next : null);
+  }
   createServer().listen(port, host, () => {
     log(`Venise server (protocol v${PROTOCOL_VERSION}) listening on port ${port}`);
     log(`  this computer:      ws://localhost:${port}`);
     for (const a of lanAddresses()) log(`  your local network: ws://${a}:${port}`);
+    if (li >= 0) { const next = process.argv[li + 1]; log(`  logging frames to:  ${next && !next.startsWith("--") ? next : "the console"}`); }
   });
 }
 

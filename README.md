@@ -81,7 +81,7 @@ From the source, run `npm run server`. It listens on port 7777 and prints the ad
 - `net.peers()`, `net.id()` and `net.status()`
 - Callbacks: `_connected(id, name, room)`, `_joined(id, name)`, `_left(id, name, reason)`, `_message(from, channel, data, private)`, `_state(key, value, from)`, `_disconnected(reason)` and `_neterror(code, text)`
 
-The **Network** section of Runtime info (F1) shows the connection, room, players and ping. The full protocol, including every message and limit, is in [docs/PROTOCOL.md](docs/PROTOCOL.md). The server has no passwords or encryption, so use it on your own computer or local network.
+The **Network** section of Runtime info (F1) shows the connection, room, players and ping. To watch the traffic, start the server with `--log-frames` (add a file name to record to a file); it prints every message in and out as plain JSON. The full protocol, including every message and limit, is in [docs/PROTOCOL.md](docs/PROTOCOL.md). The server has no passwords or encryption, so use it on your own computer or local network.
 
 ## Working on the source
 
