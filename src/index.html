@@ -33,6 +33,7 @@
     <symbol id="i-folder-open" viewBox="0 0 24 24"><path d="M3.5 18.5V6A1.5 1.5 0 0 1 5 4.5h4l2 2.5h7.5A1.5 1.5 0 0 1 20 8.5V10"/><path d="M3.5 18.5 6.2 11a1.5 1.5 0 0 1 1.4-1h13.2a1 1 0 0 1 .95 1.3L19.5 18.5z"/></symbol>
     <symbol id="i-file-plus" viewBox="0 0 24 24"><path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8z"/><path d="M14 3v5h5M12 11.5v6M9 14.5h6"/></symbol>
     <symbol id="i-lua" viewBox="0 0 24 24"><path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8z"/><path d="M14 3v5h5"/><path d="M8.5 12.5v4h2.5M13 12.5v2.8a1.2 1.2 0 0 0 2.4 0v-2.8"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.1"/></symbol>
     <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M3 7h4l10 10h4M3 17h4l3-3M14 10l3-3h4M18 4l3 3-3 3M18 14l3 3-3 3"/></symbol>
   </defs>
 </svg>
@@ -101,6 +102,7 @@
   <header class="titlebar">
     <button class="press-me" id="pressMe">Press me</button>
     <button class="title-btn" id="homeBtn" title="Start window"><svg><use href="#i-home"/></svg></button>
+    <button class="title-btn" id="infoBtn" title="Runtime info (F1)"><svg><use href="#i-info"/></svg></button>
     <div class="drag" data-drag></div>
     <div class="wincontrols">
       <button data-win="min" aria-label="Minimize"><svg><use href="#i-min"/></svg></button>
@@ -177,7 +179,7 @@
   </div>
 
   <footer class="statusbar">
-    <span id="runtime">Lua 5.3 · Emulator runtime</span>
+    <button id="runtime" class="status-btn" title="Show runtime info">Lua 5.3 · Emulator runtime</button>
     <div class="spacer"></div>
     <span id="problems">No problems</span>
     <span id="cursor">Ln 1, Col 1</span>
@@ -196,6 +198,21 @@
       <button class="btn" id="imgFolderBtn"><svg><use href="#i-folder"/></svg>Open images folder</button>
       <div class="spacer"></div>
       <button class="btn primary" id="againBtn"><svg><use href="#i-shuffle"/></svg>Another one</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="infoModal" hidden>
+  <div class="modal-card info-card" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
+    <div class="modal-head">
+      <span id="infoTitle">Runtime info</span>
+      <button class="icon-btn" id="infoClose" aria-label="Close"><svg><use href="#i-x"/></svg></button>
+    </div>
+    <div class="info-body" id="infoBody"></div>
+    <div class="modal-foot">
+      <span class="info-hint">Scripts can read this with <code>getwindowinfo()</code> and <code>getruntimeinfo()</code></span>
+      <div class="spacer"></div>
+      <button class="btn" id="infoCopy"><svg><use href="#i-copy"/></svg>Copy info</button>
     </div>
   </div>
 </div>

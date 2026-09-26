@@ -55,6 +55,14 @@
 
   let lastImageUrl = null;
   let onWindowState = () => {};
+  // Square corners while maximized, rounded otherwise (the page draws the rounded window itself).
+  const setMaximized = max => {
+    document.documentElement.classList.toggle("maximized", max);
+    onWindowState(max);
+  };
+
+  let osInfo = null;
+  N.computer.getOSInfo().then(i => { osInfo = i; }).catch(() => {});
 
   window.venise = {
     async listScripts() {
@@ -117,6 +125,41 @@
       else await N.os.open("file://" + dir);
     },
 
+    // Details about this window and the runtime behind it (shown in Runtime info and returned to Lua).
+    async info() {
+      const [size, pos, isMax, mem] = await Promise.all([
+        N.window.getSize().catch(() => null),
+        N.window.getPosition().catch(() => null),
+        N.window.isMaximized().catch(() => false),
+        N.computer.getMemoryInfo().catch(() => null),
+      ]);
+      const maximized = isMax === true;
+      // Also catches maximize/restore done with Windows shortcuts or snapping.
+      if (document.documentElement.classList.contains("maximized") !== maximized) setMaximized(maximized);
+      return {
+        window: {
+          title: document.title,
+          width: size && typeof size.width === "number" ? size.width : null,
+          height: size && typeof size.height === "number" ? size.height : null,
+          x: pos && typeof pos.x === "number" ? pos.x : null,
+          y: pos && typeof pos.y === "number" ? pos.y : null,
+          maximized,
+        },
+        server: { port: window.NL_PORT, url: location.origin, pid: Number(window.NL_PID) || window.NL_PID, mode: window.NL_MODE },
+        runtime: {
+          neutralino: window.NL_VERSION,
+          client: window.NL_CVERSION,
+          os: osInfo ? `${osInfo.name} ${osInfo.version}`.trim() : window.NL_OS,
+          arch: window.NL_ARCH,
+          appId: window.NL_APPID,
+          appVersion: window.NL_APPVERSION,
+          memoryTotalMB: mem && mem.physical ? Math.round(mem.physical.total / 1048576) : null,
+          memoryFreeMB: mem && mem.physical ? Math.round(mem.physical.available / 1048576) : null,
+        },
+        paths: { app: winPath(root), data: winPath(data) },
+      };
+    },
+
     // Files passed on the command line, e.g. when a .lua file is opened with Venise from Explorer.
     launchFiles: (window.NL_ARGS || []).slice(1).filter(a => !a.startsWith("--") && SCRIPT_EXT.test(a)),
 
@@ -125,14 +168,14 @@
         const mode = name === "splash" ? "splash" : "main";
         if (mode === windowMode) return; // start window <-> editor: keep the user's size and position
         windowMode = mode;
-        if (await N.window.isMaximized()) { await N.window.unmaximize(); onWindowState(false); }
+        if (await N.window.isMaximized()) { await N.window.unmaximize(); setMaximized(false); }
         await N.window.setSize(mode === "splash" ? SPLASH_SIZE : MAIN_SIZE);
         await N.window.center();
       },
       min: () => N.window.minimize(),
       async max() {
-        if (await N.window.isMaximized()) { await N.window.unmaximize(); onWindowState(false); }
-        else { await N.window.maximize(); onWindowState(true); }
+        if (await N.window.isMaximized()) { await N.window.unmaximize(); setMaximized(false); }
+        else { await N.window.maximize(); setMaximized(true); }
       },
       close: () => N.app.exit(),
       onState: cb => { onWindowState = cb; },

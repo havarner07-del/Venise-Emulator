@@ -41,6 +41,7 @@ If Windows shows "Windows protected your PC", click **More info → Run anyway**
 | **Open File** (Ctrl+O) / **Save File** (Ctrl+S) | Opens or saves `.lua` files. Ctrl+Shift+S saves as a new file |
 | **Compile** | Checks the script for syntax errors. Errors also show live in the status bar |
 | Sun / moon button | Switches between light and dark themes |
+| **ⓘ** button, **F1**, or the Lua label in the status bar | Opens **Runtime info**: window size and position, the local server port and URL, process ID, Neutralino and Lua versions, OS, memory, frame rate and folders. It updates live and has a **Copy info** button |
 
 ## Running your own game
 
@@ -49,6 +50,8 @@ Put your game in `Data\Game\main.lua` and press **Inject**. If there's no `main.
 - `cls(c)`, `pset(x,y,c)`, `line(x0,y0,x1,y1,c)`, `rect(...)`, `rectfill(...)`, `circfill(x,y,r,c)` and `text(s,x,y,c)`
 - `btn(i)` for input: 0 left, 1 right, 2 up, 3 down, 4 Z, 5 X
 - `time()` and `rnd(n)`
+- `getwindowinfo()` returns a table with `title`, `width`, `height`, `x`, `y`, `maximized`, `port`, `url`, `pid` and `mode`
+- `getruntimeinfo()` returns a table with `lua`, `engine`, `neutralino`, `client`, `os`, `arch`, `app_version`, `memory_total_mb`, `memory_free_mb`, `injected`, `game`, `fps`, `uptime` and `data_path`
 - The callbacks `_init()`, `_update()` (called 30 times a second) and `_draw()`
 
 The screen is 128×128 and uses a 16-color palette. `print()` writes to the Output panel.

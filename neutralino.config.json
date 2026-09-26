@@ -23,6 +23,8 @@
     "window.*",
     "filesystem.*",
     "events.*",
+    "computer.getOSInfo",
+    "computer.getMemoryInfo",
     "debug.log"
   ],
   "modes": {
@@ -36,6 +38,7 @@
       "icon": "/src/icon.png",
       "enableInspector": false,
       "borderless": true,
+      "transparent": true,
       "maximize": false,
       "hidden": false,
       "resizable": false,

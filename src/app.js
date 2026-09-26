@@ -16,8 +16,15 @@ const api = window.venise || {
   loadGame: async () => null,
   openFolder: async () => {},
   launchFiles: [],
+  info: async () => ({
+    window: { title: document.title, width: innerWidth, height: innerHeight, x: screenX, y: screenY, maximized: false },
+    server: { port: Number(location.port) || null, url: location.origin, pid: null, mode: "browser" },
+    runtime: { neutralino: null, client: null, os: navigator.platform, arch: null, appId: null, appVersion: null, memoryTotalMB: null, memoryFreeMB: null },
+    paths: { app: null, data: null },
+  }),
   win: { min() {}, max() {}, close() {}, onState() {}, layout: async () => {} },
 };
+const appStarted = performance.now();
 const baseName = p => p.split(/[\\/]/).pop();
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -100,6 +107,16 @@ function _draw()
   text("coins " .. #coins, 3, 11, 6)
   text(string.format("x %.1f", player.x), 3, 19, 6)
 end` },
+  { name: "WindowInfo.lua", code:
+`-- Prints details about the Venise window and runtime
+local w = getwindowinfo()
+print("window", w.title, string.format("%sx%s at %s,%s", w.width, w.height, w.x, w.y))
+print("server", w.url, "port", w.port, "pid", w.pid)
+
+local r = getruntimeinfo()
+print("runtime", r.lua, "on", r.os, r.arch)
+print("neutralino", r.neutralino, "fps", r.fps, "uptime", r.uptime)
+return w.port` },
   { name: "Inspect.lua", code:
 `-- Lists every value in the player table
 for k, v in pairs(player) do
@@ -191,7 +208,7 @@ function closeTab(id) {
 /* ---------------- editor ---------------- */
 const KW = new Set("and break do else elseif end for function goto if in local not or repeat return then until while".split(" "));
 const CONST = new Set(["true", "false", "nil"]);
-const BUILTIN = new Set("print pairs ipairs type tostring tonumber select next error assert pcall xpcall require setmetatable getmetatable rawget rawset math string table os coroutine utf8 cls pset line rect rectfill circfill text btn time rnd self".split(" "));
+const BUILTIN = new Set("print pairs ipairs type tostring tonumber select next error assert pcall xpcall require setmetatable getmetatable rawget rawset math string table os coroutine utf8 cls pset line rect rectfill circfill text btn time rnd getwindowinfo getruntimeinfo self".split(" "));
 const TOKEN = /--\[(=*)\[[\s\S]*?(?:\]\1\]|$)|--[^\n]*|\[(=*)\[[\s\S]*?(?:\]\2\]|$)|"(?:\\.|[^"\\\n])*"?|'(?:\\.|[^'\\\n])*'?|\b0[xX][\da-fA-F]+\b|\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b|[A-Za-z_]\w*/g;
 const CALL = /\s*[({"']/y;
 const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
@@ -354,7 +371,7 @@ const PAL = ["#000000", "#1d2b53", "#7e2553", "#008751", "#ab5236", "#5f574f", "
              "#ff004d", "#ffa300", "#ffec27", "#00e436", "#29adff", "#83769c", "#ff77a8", "#ffccaa"];
 const cv = $("#screen"), g = cv.getContext("2d");
 const pressed = [false, false, false, false, false, false];
-let L = null, running = false, raf = 0, deadline = 0, startTime = 0;
+let L = null, running = false, raf = 0, deadline = 0, startTime = 0, gameName = null, currentFps = 0;
 
 const col = c => PAL[((Math.floor(c) % 16) + 16) % 16];
 const num = (L, i, d) => lua.lua_isnoneornil(L, i) ? d : lauxlib.luaL_checknumber(L, i);
@@ -415,6 +432,23 @@ function registerApi(L) {
   reg("btn", L => { lua.lua_pushboolean(L, !!pressed[Math.floor(num(L, 1, 0))]); return 1; });
   reg("time", L => { lua.lua_pushnumber(L, (performance.now() - startTime) / 1000); return 1; });
   reg("rnd", L => { lua.lua_pushnumber(L, Math.random() * num(L, 1, 1)); return 1; });
+  reg("getwindowinfo", L => { pushValue(L, luaWindowInfo()); return 1; });
+  reg("getruntimeinfo", L => { pushValue(L, luaRuntimeInfo()); return 1; });
+}
+
+// Pushes a JS value onto the Lua stack; objects become tables, null becomes nil.
+function pushValue(L, v) {
+  if (v === null || v === undefined) lua.lua_pushnil(L);
+  else if (typeof v === "boolean") lua.lua_pushboolean(L, v);
+  else if (typeof v === "number") Number.isInteger(v) ? lua.lua_pushinteger(L, v) : lua.lua_pushnumber(L, v);
+  else if (typeof v === "object") {
+    lua.lua_createtable(L, 0, Object.keys(v).length);
+    for (const [k, val] of Object.entries(v)) {
+      if (val === null || val === undefined) continue;
+      pushValue(L, val);
+      lua.lua_setfield(L, -2, S(k));
+    }
+  } else lua.lua_pushstring(L, S(String(v)));
 }
 
 function runChunk(code, name, limitMs) {
@@ -484,6 +518,7 @@ async function inject() {
   stop();
   const custom = await api.loadGame();
   const game = custom || { name: "Coin Run", code: DEMO_GAME };
+  gameName = game.name;
   L = lauxlib.luaL_newstate();
   lualib.luaL_openlibs(L);
   registerApi(L);
@@ -547,7 +582,7 @@ function frame(now) {
   const d = callGlobal("_draw", 120);
   if (!d.ok) return crash("_draw", d.msg);
   draws++;
-  if (now - fpsT >= 1000) { $("#fps").textContent = Math.round(draws * 1000 / (now - fpsT)) + " fps"; draws = 0; fpsT = now; }
+  if (now - fpsT >= 1000) { currentFps = Math.round(draws * 1000 / (now - fpsT)); $("#fps").textContent = currentFps + " fps"; draws = 0; fpsT = now; }
   $("#clock").textContent = ((now - startTime) / 1000).toFixed(1) + "s";
 }
 
@@ -560,6 +595,8 @@ addEventListener("keydown", e => {
   if (mod && e.key === "Enter") { e.preventDefault(); execute(); return; }
   if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); saveCurrent(e.shiftKey); return; }
   if (mod && e.key.toLowerCase() === "o") { e.preventDefault(); $("#openBtn").click(); return; }
+  if (e.key === "F1") { e.preventDefault(); openInfo(); return; }
+  if (e.key === "Escape" && !$("#infoModal").hidden) { closeInfo(); return; }
   if (e.key === "Escape" && !$("#modal").hidden) { closeModal(); return; }
   if (typing() || mod) return;
   const b = KEYS[e.key];
@@ -624,6 +661,106 @@ function applyTheme(t) {
   store.set("venise.theme", t);
 }
 $("#themeBtn").onclick = () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+
+/* ---------------- runtime info ---------------- */
+// Refreshed every second so Lua can read it synchronously through getwindowinfo() / getruntimeinfo().
+let nativeInfo = { window: {}, server: {}, runtime: {}, paths: {} };
+async function refreshInfo() {
+  try { nativeInfo = await api.info(); } catch {}
+  if (!$("#infoModal").hidden) renderInfo();
+}
+setInterval(refreshInfo, 1000);
+
+const uptime = () => Math.round((performance.now() - appStarted) / 100) / 10;
+function luaWindowInfo() {
+  const w = nativeInfo.window, sv = nativeInfo.server;
+  return { title: w.title, width: w.width, height: w.height, x: w.x, y: w.y, maximized: w.maximized,
+           port: sv.port, url: sv.url, pid: sv.pid, mode: sv.mode };
+}
+function luaRuntimeInfo() {
+  const r = nativeInfo.runtime;
+  return {
+    lua: F ? lua.LUA_RELEASE : null, engine: F ? F.FENGARI_RELEASE : null,
+    neutralino: r.neutralino, client: r.client, os: r.os, arch: r.arch,
+    app_id: r.appId, app_version: r.appVersion, memory_total_mb: r.memoryTotalMB, memory_free_mb: r.memoryFreeMB,
+    injected: running, game: running ? gameName : null, fps: running ? currentFps : 0, uptime: uptime(),
+    data_path: nativeInfo.paths.data,
+  };
+}
+
+const show = v => (v === null || v === undefined || v === "" ? "—" : String(v));
+function infoSections() {
+  const w = nativeInfo.window, sv = nativeInfo.server, r = nativeInfo.runtime, p = nativeInfo.paths;
+  return [
+    ["Window", [
+      ["Title", w.title],
+      ["Size", w.width ? `${w.width} × ${w.height}` : null],
+      ["Position", w.x !== null && w.x !== undefined ? `${w.x}, ${w.y}` : null],
+      ["Maximized", w.maximized ? "Yes" : "No"],
+    ]],
+    ["Server", [
+      ["Port", sv.port],
+      ["URL", sv.url],
+      ["Process ID", sv.pid],
+      ["Mode", sv.mode],
+    ]],
+    ["Runtime", [
+      ["Neutralino", r.neutralino],
+      ["Client library", r.client],
+      ["Operating system", r.os],
+      ["Architecture", r.arch],
+      ["App version", r.appVersion],
+      ["Memory", r.memoryTotalMB ? `${r.memoryFreeMB.toLocaleString()} MB free of ${r.memoryTotalMB.toLocaleString()} MB` : null],
+    ]],
+    ["Lua", [
+      ["Version", F ? `${lua.LUA_RELEASE} (${F.FENGARI_RELEASE})` : "Not loaded"],
+      ["Injected", running ? `Yes, into ${gameName}` : "No", running],
+      ["Frame rate", running ? `${currentFps} fps` : null],
+      ["Uptime", `${uptime().toFixed(1)} s`],
+    ]],
+    ["Folders", [
+      ["App", p.app],
+      ["Data", p.data],
+    ]],
+  ];
+}
+function renderInfo() {
+  const body = $("#infoBody");
+  const keepScroll = body.scrollTop;
+  body.textContent = "";
+  for (const [title, rows] of infoSections()) {
+    const h = document.createElement("div");
+    h.className = "info-section"; h.textContent = title;
+    const dl = document.createElement("dl");
+    dl.className = "info-grid";
+    for (const [label, value, good] of rows) {
+      const dt = document.createElement("dt"); dt.textContent = label;
+      const dd = document.createElement("dd"); dd.textContent = show(value);
+      if (good) dd.className = "good";
+      dl.append(dt, dd);
+    }
+    body.append(h, dl);
+  }
+  body.scrollTop = keepScroll;
+}
+async function openInfo() {
+  $("#infoModal").hidden = false;
+  renderInfo();
+  await refreshInfo();
+}
+function closeInfo() { $("#infoModal").hidden = true; }
+$("#infoBtn").onclick = openInfo;
+$("#runtime").onclick = openInfo;
+$("#infoClose").onclick = closeInfo;
+$("#infoModal").addEventListener("mousedown", e => { if (e.target.id === "infoModal") closeInfo(); });
+$("#infoCopy").onclick = async () => {
+  const text = infoSections().map(([title, rows]) =>
+    title + "\n" + rows.map(([label, value]) => `  ${label}: ${show(value)}`).join("\n")).join("\n\n");
+  const label = $("#infoCopy").lastChild;
+  try { await navigator.clipboard.writeText(text); label.textContent = "Copied"; }
+  catch { label.textContent = "Couldn't copy"; }
+  setTimeout(() => { label.textContent = "Copy info"; }, 1500);
+};
 
 /* ---------------- recent files ---------------- */
 let recent = store.get("venise.recent", []);
@@ -731,6 +868,8 @@ $("#homeBtn").onclick = () => showView("start");
 applyTheme(store.get("venise.theme", "dark"));
 g.imageSmoothingEnabled = false;
 select(active);
+
+refreshInfo();
 
 (async function boot() {
   const started = performance.now();

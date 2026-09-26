@@ -55,8 +55,9 @@
 
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
+/* The native window is transparent so each screen can draw itself with rounded corners. */
 body {
-  background: var(--bg);
+  background: transparent;
   color: var(--text);
   font: 13px/1.4 "Segoe UI", system-ui, -apple-system, sans-serif;
   overflow: hidden;
@@ -71,7 +72,10 @@ svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width:
 ::-webkit-scrollbar-thumb { background: var(--scroll); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
 ::-webkit-scrollbar-corner { background: transparent; }
 
-.window { height: 100%; display: flex; flex-direction: column; border: 1px solid var(--line); }
+.window { height: 100%; display: flex; flex-direction: column; border: 1px solid var(--line); background: var(--bg); }
+:root { --win-radius: 10px; }
+.window, .start, .splash, .modal { border-radius: var(--win-radius); overflow: hidden; }
+html.maximized { --win-radius: 0px; }
 .label { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
 .spacer { flex: 1; }
 
@@ -188,6 +192,8 @@ canvas:focus-visible { outline: 2px solid var(--accent); }
 /* status bar */
 .statusbar { height: 26px; flex: none; display: flex; align-items: center; gap: 18px; padding: 0 12px; border-top: 1px solid var(--line); background: var(--panel); color: var(--muted); font-size: 11.5px; }
 #problems.bad { color: var(--err); }
+.status-btn { border: 0; background: none; padding: 0 4px; margin-left: -4px; height: 20px; border-radius: 4px; color: inherit; font-size: inherit; }
+.status-btn:hover { background: var(--panel-2); color: var(--text); }
 #runtime.on { color: var(--ok); }
 
 /* modal */
@@ -253,5 +259,17 @@ canvas:focus-visible { outline: 2px solid var(--accent); }
 .action span span { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
 .continue { align-self: flex-end; margin-top: 6px; border: 0; background: none; color: var(--accent); font-weight: 600; font-size: 13px; padding: 6px 2px; }
 .continue:hover { text-decoration: underline; }
+
+/* runtime info */
+.info-card { width: min(640px, 100%); }
+.info-body { overflow: auto; padding: 6px 18px 14px; background: var(--bg); user-select: text; }
+.info-section { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); padding: 14px 0 6px; }
+.info-grid { display: grid; grid-template-columns: 150px minmax(0, 1fr); column-gap: 16px; }
+.info-grid dt, .info-grid dd { margin: 0; padding: 5px 0; border-top: 1px solid var(--line); font-size: 12.5px; }
+.info-grid dt { color: var(--muted); }
+.info-grid dd { font-family: "Cascadia Code", Consolas, monospace; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.info-grid dd.good { color: var(--ok); }
+.info-hint { color: var(--muted); font-size: 12px; }
+.info-hint code { color: var(--text); font-family: "Cascadia Code", Consolas, monospace; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
