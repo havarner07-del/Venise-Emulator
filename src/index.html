@@ -135,9 +135,15 @@
     </aside>
 
     <main class="main">
+      <div class="viewtabs" role="tablist">
+        <button class="viewtab active" id="viewEditor" data-view="editor" role="tab"><svg><use href="#i-code"/></svg>Editor</button>
+        <button class="viewtab" id="viewRuntime" data-view="runtime" role="tab"><svg><use href="#i-info"/></svg>Runtime</button>
+      </div>
+
       <div class="tabs" id="tabs"></div>
 
       <div class="work">
+       <div class="workmain">
         <div class="editor" id="editor">
           <pre class="gutter" id="gutter" aria-hidden="true"></pre>
           <div class="code">
@@ -146,6 +152,22 @@
             <textarea id="ed" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="Lua script"></textarea>
           </div>
         </div>
+
+        <section class="runtime-pane" id="runtimePane" hidden>
+          <div class="rt-controls">
+            <label class="rt-select">
+              <span>App</span>
+              <select id="rtApp" aria-label="Choose an app to run"></select>
+            </label>
+            <button class="btn primary" id="rtRun" title="Run the selected app in Venise's runtime"><svg><use href="#i-play"/></svg>Run</button>
+            <button class="btn" id="rtStop" title="Stop the running app"><svg><use href="#i-x"/></svg>Stop</button>
+            <button class="icon-btn" id="rtRefresh" title="Refresh the app list"><svg><use href="#i-refresh"/></svg></button>
+            <div class="spacer"></div>
+            <button class="btn" id="rtCopy"><svg><use href="#i-copy"/></svg>Copy</button>
+          </div>
+          <div class="rt-info info-body" id="rtInfo"></div>
+        </section>
+       </div>
 
         <section class="game" id="game" hidden>
           <div class="game-head"><span class="label">Game</span><span id="gameName"></span></div>

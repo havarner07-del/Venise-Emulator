@@ -130,7 +130,23 @@ html.maximized { --win-radius: 0px; }
 .tab-add { width: 30px; height: 30px; border: 0; background: none; color: var(--muted); border-radius: 6px; font-size: 17px; }
 .tab-add:hover { background: var(--panel); color: var(--text); }
 
+.viewtabs { display: flex; gap: 4px; flex: none; }
+.viewtab { display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--muted); font-size: 12.5px; }
+.viewtab svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.viewtab.active { background: var(--panel-2); border-color: var(--line-2); color: var(--text); }
+.viewtab:not(.active):hover { color: var(--text); }
+
 .work { flex: 1; min-height: 0; display: flex; gap: 10px; }
+.workmain { flex: 1; min-width: 0; display: flex; }
+.workmain > .editor, .workmain > .runtime-pane { flex: 1; min-width: 0; }
+
+.runtime-pane { display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.rt-controls { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); flex: none; }
+.rt-select { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); min-width: 0; flex: 1; }
+.rt-select select { flex: 1; min-width: 0; height: 30px; padding: 0 8px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--panel-2); color: var(--text); font: inherit; font-size: 12.5px; }
+.rt-info { flex: 1; min-height: 0; }
+.rt-empty { color: var(--muted); font-size: 12.5px; padding: 18px 4px; }
+
 .editor {
   flex: 1; min-width: 0; display: flex; background: var(--editor); border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
   font: 13.5px/21px "Cascadia Code", "Cascadia Mono", Consolas, "Courier New", monospace;

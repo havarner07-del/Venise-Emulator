@@ -407,7 +407,7 @@ const PAL = ["#000000", "#1d2b53", "#7e2553", "#008751", "#ab5236", "#5f574f", "
 const cv = $("#screen"), g = cv.getContext("2d");
 const pressed = [false, false, false, false, false, false];
 const net = new window.VeniseNet();
-let L = null, running = false, raf = 0, deadline = 0, startTime = 0, gameName = null, currentFps = 0;
+let L = null, running = false, raf = 0, deadline = 0, startTime = 0, gameName = null, currentFps = 0, currentApp = null;
 
 const col = c => PAL[((Math.floor(c) % 16) + 16) % 16];
 const num = (L, i, d) => lua.lua_isnoneornil(L, i) ? d : lauxlib.luaL_checknumber(L, i);
@@ -642,12 +642,23 @@ function setInjected(on, label) {
   rt.classList.toggle("on", on);
 }
 function stop() { running = false; cancelAnimationFrame(raf); }
-async function inject() {
+// Turns a chosen app (from the Runtime tab) into { name, code }. Without one, the default is the
+// game in Data/Game/main.lua, or the built-in demo when there isn't one.
+async function resolveApp(app) {
+  if (!app || app.source === "game") { const g = await api.loadGame(); return g || { name: "Coin Run", code: DEMO_GAME }; }
+  if (app.source === "demo") return { name: "Coin Run", code: DEMO_GAME };
+  if (app.source === "editor") { const t = cur(); return { name: t.name, code: t.code }; }
+  if (app.code != null) return { name: app.name, code: app.code };
+  if (app.path) { try { return { name: baseName(app.path), code: await api.readFile(app.path) }; } catch (err) { log("err", `Couldn't read ${app.path}: ${(err && err.message) || err}`); return null; } }
+  return null;
+}
+async function inject(app) {
   if (!F) { log("err", "The Lua runtime (src/vendor/fengari-web.js) is missing. Reinstall Venise."); return; }
   stop();
   net.disconnect();
-  const custom = await api.loadGame();
-  const game = custom || { name: "Coin Run", code: DEMO_GAME };
+  const game = await resolveApp(app);
+  if (!game) return;
+  currentApp = app || { source: "game" };
   gameName = game.name;
   L = lauxlib.luaL_newstate();
   lualib.luaL_openlibs(L);
@@ -665,6 +676,9 @@ async function inject() {
   running = true;
   setInjected(true, game.name);
   log("ok", `Injected into ${game.name}. Execute now runs inside the game.`);
+  await refreshInfo();
+  log("sys", "Runtime: " + runtimeSummary());
+  syncRuntime();
   last = performance.now(); acc = 0; fpsT = last; draws = 0;
   raf = requestAnimationFrame(frame);
   cv.focus({ preventScroll: true });
@@ -672,11 +686,15 @@ async function inject() {
 function detach() {
   stop(); net.disconnect(); L = null;
   setInjected(false);
+  currentApp = null;
+  syncRuntime();
   log("sys", "Detached. The game VM was closed.");
 }
 function crash(where, msg) {
   stop(); net.disconnect(); L = null;
   setInjected(false, "crashed");
+  currentApp = null;
+  syncRuntime();
   g.fillStyle = PAL[1]; g.fillRect(0, 0, 128, 128);
   g.fillStyle = PAL[8]; g.font = "8px Consolas, monospace"; g.textAlign = "center"; g.textBaseline = "top";
   g.fillText("CRASHED", 64, 56); g.textAlign = "left";
@@ -814,6 +832,7 @@ let nativeInfo = { window: {}, server: {}, runtime: {}, paths: {} };
 async function refreshInfo() {
   try { nativeInfo = await api.info(); } catch {}
   if (!$("#infoModal").hidden) renderInfo();
+  if (workView === "runtime") renderRuntime();
 }
 setInterval(refreshInfo, 1000);
 
@@ -878,11 +897,10 @@ function infoSections() {
     ]],
   ];
 }
-function renderInfo() {
-  const body = $("#infoBody");
+function renderGrid(body, sections) {
   const keepScroll = body.scrollTop;
   body.textContent = "";
-  for (const [title, rows] of infoSections()) {
+  for (const [title, rows] of sections) {
     const h = document.createElement("div");
     h.className = "info-section"; h.textContent = title;
     const dl = document.createElement("dl");
@@ -896,6 +914,85 @@ function renderInfo() {
     body.append(h, dl);
   }
   body.scrollTop = keepScroll;
+}
+function renderInfo() { renderGrid($("#infoBody"), infoSections()); }
+
+/* ---------------- runtime tab ---------------- */
+// A one-line digest of the runtime, logged to Output when an app starts.
+function runtimeSummary() {
+  const sv = nativeInfo.server, r = nativeInfo.runtime;
+  const parts = [
+    running ? `app ${gameName}` : "no app running",
+    `Lua ${F ? lua.LUA_RELEASE.replace("Lua ", "") : "—"}`,
+    r.neutralino ? `Neutralino ${r.neutralino}` : `engine ${F ? F.FENGARI_RELEASE : "—"}`,
+    sv.port ? `port ${sv.port}` : (sv.url ? `url ${sv.url}` : "no server"),
+    sv.pid ? `pid ${sv.pid}` : null,
+    `v${nativeInfo.runtime.appVersion || "1.0.0"}`,
+  ];
+  return parts.filter(Boolean).join(" · ");
+}
+// The extra "Application" section shown at the top of the Runtime tab.
+function appSection() {
+  const sv = nativeInfo.server, r = nativeInfo.runtime;
+  return ["Application", [
+    ["Selected", appLabel(selectedApp)],
+    ["Status", running ? "Running" : "Stopped", running],
+    ["Running app", running ? gameName : null],
+    ["Server port", sv.port],
+    ["Server URL", sv.url],
+    ["Process ID", sv.pid],
+    ["Lua version", F ? lua.LUA_RELEASE : "Not loaded"],
+    ["Engine", F ? F.FENGARI_RELEASE : null],
+    ["Neutralino", r.neutralino],
+    ["App version", r.appVersion || "1.0.0"],
+    ["Frame rate", running ? `${currentFps} fps` : null],
+  ]];
+}
+function renderRuntime() { renderGrid($("#rtInfo"), [appSection(), ...infoSections()]); }
+
+let selectedApp = { source: "game" };
+function appLabel(app) {
+  if (!app) return "—";
+  if (app.source === "demo") return "Coin Run (built-in demo)";
+  if (app.source === "game") return "Data/Game/main.lua (or demo)";
+  if (app.source === "editor") return "Current editor tab";
+  return app.name || app.path || "—";
+}
+// Fills the app dropdown with everything Venise can run.
+function buildAppList() {
+  const sel = $("#rtApp");
+  const prev = sel.value;
+  sel.textContent = "";
+  // Standalone apps only (things with their own _draw/_update loop). The Examples are executor
+  // snippets that expect a running game, so they belong on the Execute button, not here.
+  const groups = [
+    ["Built in", [{ source: "demo", key: "demo" }, { source: "game", key: "game" }, { source: "editor", key: "editor" }]],
+    ["Scripts folder", folderScripts.map(s => ({ path: s.path, name: s.name, key: "path:" + s.path }))],
+  ];
+  for (const [label, items] of groups) {
+    if (!items.length) continue;
+    const og = document.createElement("optgroup");
+    og.label = label;
+    for (const it of items) {
+      const o = document.createElement("option");
+      o.value = it.key;
+      o.textContent = appLabel(it);
+      appByKey.set(it.key, it);
+      og.append(o);
+    }
+    sel.append(og);
+  }
+  sel.value = appByKey.has(prev) ? prev : "game";
+  selectedApp = appByKey.get(sel.value) || { source: "game" };
+}
+const appByKey = new Map();
+// Reflects the running state in the Runtime tab's buttons.
+function syncRuntime() {
+  const run = $("#rtRun"), stop = $("#rtStop");
+  if (!run) return;
+  stop.disabled = !running;
+  run.lastChild.nodeValue = running ? "Restart" : "Run";
+  if (workView === "runtime") renderRuntime();
 }
 async function openInfo() {
   $("#infoModal").hidden = false;
@@ -986,6 +1083,31 @@ function renderRecent() {
   }
 }
 $("#recentSearch").addEventListener("input", renderRecent);
+
+/* ---------------- work views: editor / runtime ---------------- */
+let workView = "editor";
+function showWork(name) {
+  workView = name;
+  document.querySelectorAll(".viewtab").forEach(b => b.classList.toggle("active", b.dataset.view === name));
+  $("#tabs").hidden = name !== "editor";
+  $("#editor").hidden = name !== "editor";
+  $("#runtimePane").hidden = name !== "runtime";
+  if (name === "runtime") { buildAppList(); renderRuntime(); }
+  else refreshEditor();
+}
+document.querySelectorAll(".viewtab").forEach(b => { b.onclick = () => showWork(b.dataset.view); });
+$("#rtApp").onchange = e => { selectedApp = appByKey.get(e.target.value) || { source: "game" }; renderRuntime(); };
+$("#rtRefresh").onclick = () => refreshScripts(false).then(buildAppList);
+$("#rtRun").onclick = () => inject(selectedApp);
+$("#rtStop").onclick = () => { if (running) detach(); };
+$("#rtCopy").onclick = async () => {
+  const text = [appSection(), ...infoSections()].map(([title, rows]) =>
+    title + "\n" + rows.map(([label, value]) => `  ${label}: ${show(value)}`).join("\n")).join("\n\n");
+  const label = $("#rtCopy").lastChild;
+  try { await navigator.clipboard.writeText(text); label.nodeValue = "Copied"; }
+  catch { label.nodeValue = "Couldn't copy"; }
+  setTimeout(() => { label.nodeValue = "Copy"; }, 1500);
+};
 
 /* ---------------- views: splash, start window, editor ---------------- */
 const views = { splash: $("#splash"), start: $("#start"), ide: $("#ide") };

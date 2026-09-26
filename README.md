@@ -46,6 +46,14 @@ The Start window also has a **Launch Roblox** button. It opens Roblox the normal
 | Sun / moon button | Switches between light and dark themes |
 | **ⓘ** button, **F1**, or the Lua label in the status bar | Opens **Runtime info**: window size and position, the local server port and URL, process ID, Neutralino and Lua versions, OS, memory, frame rate and folders. It updates live and has a **Copy info** button |
 
+## The Runtime tab
+
+Above the editor are two tabs, **Editor** and **Runtime**. The Runtime tab lets you pick an app and run it in Venise's Lua runtime, then shows everything about that runtime live.
+
+- **App**: choose what to run — the built-in Coin Run demo, your game in `Data\Game\main.lua`, whatever is in the current editor tab, or any script in the scripts folder.
+- **Run** (or **Restart**) starts the app; **Stop** ends it. This is the same runtime the **Inject** button uses, so **Execute** still runs your scripts inside it.
+- The readout lists the selected app and whether it's running, the server **port** and **URL**, process ID, **Lua** and engine versions, Neutralino version, app version, frame rate, memory, OS and folders. It refreshes every second. **Copy** puts it all on the clipboard, and a one-line summary is written to the Output panel each time an app starts.
+
 ## Running your own game
 
 Put your game in `Data\Game\main.lua` and press **Inject**. If there's no `main.lua`, Venise runs its built-in demo, Coin Run. Games can use these functions:
