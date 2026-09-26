@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; connect-src 'self' ws: wss:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; connect-src 'self' ws: wss: https://api.anthropic.com">
 <title>Venise</title>
 <link rel="icon" href="icon.png">
 <link rel="stylesheet" href="styles.css">
@@ -138,6 +138,7 @@
       <div class="viewtabs" role="tablist">
         <button class="viewtab active" id="viewEditor" data-view="editor" role="tab"><svg><use href="#i-code"/></svg>Editor</button>
         <button class="viewtab" id="viewRuntime" data-view="runtime" role="tab"><svg><use href="#i-info"/></svg>Runtime</button>
+        <button class="viewtab" id="viewAssistant" data-view="assistant" role="tab"><svg><use href="#i-spark"/></svg>Ask Claude</button>
       </div>
 
       <div class="tabs" id="tabs"></div>
@@ -166,6 +167,30 @@
             <button class="btn" id="rtCopy"><svg><use href="#i-copy"/></svg>Copy</button>
           </div>
           <div class="rt-info info-body" id="rtInfo"></div>
+        </section>
+
+        <section class="assistant-pane" id="assistantPane" hidden>
+          <div class="asst-log" id="asstLog">
+            <div class="asst-hello">Ask Claude anything without leaving Venise. Your questions and its replies stay in this window.</div>
+          </div>
+          <form class="asst-input" id="asstForm">
+            <textarea id="asstText" rows="2" placeholder="Ask Claude…  (Enter to send, Shift+Enter for a newline)" spellcheck="false"></textarea>
+            <div class="asst-bar">
+              <select id="asstModel" aria-label="Model"></select>
+              <button type="button" class="icon-btn" id="asstKeyBtn" title="API key"><svg><use href="#i-info"/></svg></button>
+              <button type="button" class="btn" id="asstClear" title="Clear the conversation"><svg><use href="#i-trash"/></svg>Clear</button>
+              <div class="spacer"></div>
+              <button type="submit" class="btn primary" id="asstSend"><svg><use href="#i-play"/></svg>Send</button>
+            </div>
+          </form>
+          <div class="asst-setup" id="asstSetup" hidden>
+            <label for="asstKey">Anthropic API key</label>
+            <div class="asst-key-row">
+              <input id="asstKey" type="password" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+              <button type="button" class="btn primary" id="asstKeySave">Save</button>
+            </div>
+            <p class="asst-warn">Stored in this app on your computer and sent straight to the Claude API from here. Use a personal key — anything running in Venise can read it. Get one at console.anthropic.com.</p>
+          </div>
         </section>
        </div>
 
@@ -247,6 +272,7 @@
 <script src="js/neutralino.js"></script>
 <script src="js/native.js"></script>
 <script src="js/net.js"></script>
+<script src="js/claude.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

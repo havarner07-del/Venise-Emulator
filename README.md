@@ -54,6 +54,15 @@ Above the editor are two tabs, **Editor** and **Runtime**. The Runtime tab lets 
 - **Run** (or **Restart**) starts the app; **Stop** ends it. This is the same runtime the **Inject** button uses, so **Execute** still runs your scripts inside it.
 - The readout lists the selected app and whether it's running, the server **port** and **URL**, process ID, **Lua** and engine versions, Neutralino version, app version, frame rate, memory, OS and folders. It refreshes every second. **Copy** puts it all on the clipboard, and a one-line summary is written to the Output panel each time an app starts.
 
+## Ask Claude
+
+The third tab above the editor, **Ask Claude**, is a small chat with Anthropic's Claude, so you can ask questions without leaving Venise.
+
+- Enter your **Anthropic API key** the first time (get one at [console.anthropic.com](https://console.anthropic.com)). It's kept in Venise on your computer and used only to talk to the Claude API.
+- Type a question and press **Enter** (Shift+Enter for a newline). Replies stream in. **Clear** starts a fresh conversation; the model picker chooses Opus, Sonnet or Haiku.
+
+Because Venise has no build step, it calls the Claude API straight from the app with your key. That's fine for personal use, but the key is readable by anything running in Venise — use a personal key, and don't ship Venise to other people with your key in it. For anything shared, put the key behind your own small proxy instead.
+
 ## Running your own game
 
 Put your game in `Data\Game\main.lua` and press **Inject**. If there's no `main.lua`, Venise runs its built-in demo, Coin Run. Games can use these functions:

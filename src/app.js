@@ -1092,8 +1092,10 @@ function showWork(name) {
   $("#tabs").hidden = name !== "editor";
   $("#editor").hidden = name !== "editor";
   $("#runtimePane").hidden = name !== "runtime";
-  if (name === "runtime") { buildAppList(); renderRuntime(); }
-  else refreshEditor();
+  $("#assistantPane").hidden = name !== "assistant";
+  if (name === "editor") refreshEditor();
+  else if (name === "runtime") { buildAppList(); renderRuntime(); }
+  else if (name === "assistant") openAssistant();
 }
 document.querySelectorAll(".viewtab").forEach(b => { b.onclick = () => showWork(b.dataset.view); });
 $("#rtApp").onchange = e => { selectedApp = appByKey.get(e.target.value) || { source: "game" }; renderRuntime(); };
@@ -1107,6 +1109,99 @@ $("#rtCopy").onclick = async () => {
   try { await navigator.clipboard.writeText(text); label.nodeValue = "Copied"; }
   catch { label.nodeValue = "Couldn't copy"; }
   setTimeout(() => { label.nodeValue = "Copy"; }, 1500);
+};
+
+/* ---------------- Ask Claude ---------------- */
+const C = window.VeniseClaude;
+const ASST_SYSTEM = "You are a helpful assistant embedded in Venise, a desktop Lua executor and game/emulator workbench. Be concise and practical. When you show code, prefer Lua unless asked otherwise.";
+let asstHistory = [];        // Anthropic messages array
+let asstBusy = false, asstAbort = null;
+let asstModel = store.get("venise.claude.model", C.MODELS[0].id);
+
+function asstBuildModels() {
+  const sel = $("#asstModel");
+  sel.textContent = "";
+  for (const m of C.MODELS) { const o = document.createElement("option"); o.value = m.id; o.textContent = m.label; sel.append(o); }
+  if (!C.MODELS.some(m => m.id === asstModel)) asstModel = C.MODELS[0].id;
+  sel.value = asstModel;
+}
+function asstAddMessage(who, cls) {
+  const wrap = document.createElement("div");
+  wrap.className = "asst-msg " + cls;
+  const w = document.createElement("div"); w.className = "who"; w.textContent = who;
+  const b = document.createElement("div"); b.className = "bubble";
+  wrap.append(w, b);
+  const log = $("#asstLog");
+  const hello = log.querySelector(".asst-hello"); if (hello) hello.remove();
+  log.append(wrap);
+  log.scrollTop = log.scrollHeight;
+  return b;
+}
+function asstScroll() { const log = $("#asstLog"); log.scrollTop = log.scrollHeight; }
+function asstSetKeyVisible(on) { $("#asstSetup").hidden = !on; if (on) { $("#asstKey").value = C.getKey(); $("#asstKey").focus(); } }
+
+function openAssistant() {
+  asstBuildModels();
+  if (!C.getKey()) asstSetKeyVisible(true);
+  $("#asstText").focus();
+}
+
+function asstSend() {
+  if (asstBusy) return;
+  const text = $("#asstText").value.trim();
+  if (!text) return;
+  if (!C.getKey()) { asstSetKeyVisible(true); return; }
+  $("#asstText").value = "";
+  asstAddMessage("You", "me").textContent = text;
+  asstHistory.push({ role: "user", content: text });
+
+  const bubble = asstAddMessage("Claude", "them");
+  const cursor = document.createElement("span"); cursor.className = "cursor"; cursor.textContent = "▍";
+  bubble.append(cursor);
+  asstBusy = true; $("#asstSend").disabled = true;
+  let acc = "";
+
+  const finishError = msg => {
+    bubble.parentElement.classList.remove("them"); bubble.parentElement.classList.add("err");
+    bubble.textContent = msg;
+    bubble.parentElement.firstChild.textContent = "Error";
+    asstDone();
+  };
+  const asstDone = () => { asstBusy = false; asstAbort = null; $("#asstSend").disabled = false; cursor.remove(); asstScroll(); };
+
+  asstAbort = C.ask({
+    messages: asstHistory,
+    model: asstModel,
+    system: ASST_SYSTEM,
+    onText: t => { acc += t; bubble.textContent = acc; bubble.append(cursor); asstScroll(); },
+    onDone: ({ stop }) => {
+      if (!acc) bubble.textContent = "(no response)";
+      if (stop === "refusal") bubble.textContent = acc + "\n\n[Claude declined to answer this one.]";
+      asstHistory.push({ role: "assistant", content: acc || "" });
+      asstDone();
+    },
+    onError: msg => { finishError(msg); if (/api key/i.test(msg)) asstSetKeyVisible(true); },
+  });
+}
+
+$("#asstForm").addEventListener("submit", e => { e.preventDefault(); asstSend(); });
+$("#asstText").addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); asstSend(); }
+});
+$("#asstModel").onchange = e => { asstModel = e.target.value; store.set("venise.claude.model", asstModel); };
+$("#asstKeyBtn").onclick = () => asstSetKeyVisible($("#asstSetup").hidden);
+$("#asstKeySave").onclick = () => {
+  C.setKey($("#asstKey").value.trim());
+  asstSetKeyVisible(false);
+  $("#asstText").focus();
+};
+$("#asstClear").onclick = () => {
+  if (asstAbort) asstAbort();
+  asstHistory = []; asstBusy = false; asstAbort = null; $("#asstSend").disabled = false;
+  const log = $("#asstLog"); log.textContent = "";
+  const hello = document.createElement("div"); hello.className = "asst-hello";
+  hello.textContent = "Ask Claude anything without leaving Venise. Your questions and its replies stay in this window.";
+  log.append(hello);
 };
 
 /* ---------------- views: splash, start window, editor ---------------- */
