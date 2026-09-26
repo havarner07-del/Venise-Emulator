@@ -47,12 +47,11 @@
     }
   }
 
-  // Window size for each screen, like Visual Studio: small splash, then the start window, then the full editor.
-  const LAYOUTS = {
-    splash: { width: 600, height: 340, minWidth: 600, minHeight: 340, maxWidth: 600, maxHeight: 340, resizable: false },
-    start: { width: 1000, height: 640, minWidth: 820, minHeight: 540, maxWidth: 10000, maxHeight: 10000, resizable: true },
-    ide: { width: 1200, height: 760, minWidth: 860, minHeight: 560, maxWidth: 10000, maxHeight: 10000, resizable: true },
-  };
+  // The splash is a small fixed window. After it, the window grows once to the main size, and the
+  // start window and editor share it: switching between them never resizes or moves the window.
+  const SPLASH_SIZE = { width: 600, height: 340, minWidth: 600, minHeight: 340, maxWidth: 600, maxHeight: 340, resizable: false };
+  const MAIN_SIZE = { width: 1200, height: 760, minWidth: 860, minHeight: 560, maxWidth: 10000, maxHeight: 10000, resizable: true };
+  let windowMode = "splash";
 
   let lastImageUrl = null;
   let onWindowState = () => {};
@@ -123,10 +122,11 @@
 
     win: {
       async layout(name) {
-        const size = LAYOUTS[name];
-        if (!size) return;
+        const mode = name === "splash" ? "splash" : "main";
+        if (mode === windowMode) return; // start window <-> editor: keep the user's size and position
+        windowMode = mode;
         if (await N.window.isMaximized()) { await N.window.unmaximize(); onWindowState(false); }
-        await N.window.setSize(size);
+        await N.window.setSize(mode === "splash" ? SPLASH_SIZE : MAIN_SIZE);
         await N.window.center();
       },
       min: () => N.window.minimize(),
