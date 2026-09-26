@@ -1,8 +1,10 @@
 node_modules/
 bin/
 dist/
-release/
-Data/
 .tmp/
+/Data/
 src/js/neutralino.js
 src/js/neutralino.d.ts
+# Pictures you add for "Press me" stay on your computer
+Venise/Data/Images/*
+!Venise/Data/Images/PUT IMAGES HERE.txt

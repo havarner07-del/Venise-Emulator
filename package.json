@@ -10,8 +10,6 @@
     "build": "neu build --release && node tools/package.js"
   },
   "devDependencies": {
-    "@neutralinojs/neu": "^11.7.2",
-    "png-to-ico": "^3.0.2",
-    "rcedit": "^5.0.2"
+    "@neutralinojs/neu": "^11.7.2"
   }
 }
