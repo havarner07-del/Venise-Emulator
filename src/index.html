@@ -29,18 +29,83 @@
     <symbol id="i-min" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
     <symbol id="i-max" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></symbol>
     <symbol id="i-restore" viewBox="0 0 24 24"><rect x="5" y="9" width="10" height="10" rx="1"/><path d="M9 9V6a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-3"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7M6 9.5V20h4.5v-5.5h3V20H18V9.5"/></symbol>
+    <symbol id="i-folder-open" viewBox="0 0 24 24"><path d="M3.5 18.5V6A1.5 1.5 0 0 1 5 4.5h4l2 2.5h7.5A1.5 1.5 0 0 1 20 8.5V10"/><path d="M3.5 18.5 6.2 11a1.5 1.5 0 0 1 1.4-1h13.2a1 1 0 0 1 .95 1.3L19.5 18.5z"/></symbol>
+    <symbol id="i-file-plus" viewBox="0 0 24 24"><path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8z"/><path d="M14 3v5h5M12 11.5v6M9 14.5h6"/></symbol>
+    <symbol id="i-lua" viewBox="0 0 24 24"><path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8z"/><path d="M14 3v5h5"/><path d="M8.5 12.5v4h2.5M13 12.5v2.8a1.2 1.2 0 0 0 2.4 0v-2.8"/></symbol>
     <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M3 7h4l10 10h4M3 17h4l3-3M14 10l3-3h4M18 4l3 3-3 3M18 14l3 3-3 3"/></symbol>
   </defs>
 </svg>
 
-<div class="window">
+<div class="splash" id="splash">
+  <div class="splash-brand">
+    <img src="icon.png" alt="" width="52" height="52">
+    <div>
+      <div class="splash-name">Venise</div>
+      <div class="splash-sub">Lua Executor</div>
+    </div>
+  </div>
+  <div class="splash-foot">
+    <div class="splash-status" id="splashStatus">Starting</div>
+    <div class="splash-bar"><i id="splashBar"></i></div>
+    <div class="splash-meta"><span>Version 1.0.0</span><span>Lua 5.3 runtime</span></div>
+  </div>
+</div>
+
+<div class="start" id="start" hidden>
+  <header class="start-bar">
+    <div class="drag" data-drag></div>
+    <div class="wincontrols">
+      <button data-win="min" aria-label="Minimize"><svg><use href="#i-min"/></svg></button>
+      <button data-win="max" aria-label="Maximize"><svg><use href="#i-max"/></svg></button>
+      <button data-win="close" class="close" aria-label="Close"><svg><use href="#i-x"/></svg></button>
+    </div>
+  </header>
+  <div class="start-body">
+    <div class="start-title"><h1>Venise</h1><span>1.0</span></div>
+    <div class="start-cols">
+      <section class="recent">
+        <h2>Open recent</h2>
+        <label class="search">
+          <svg><use href="#i-search"/></svg>
+          <input id="recentSearch" placeholder="Search recent" autocomplete="off" spellcheck="false">
+        </label>
+        <div class="start-note" id="startNote" hidden></div>
+        <div class="recent-list" id="recentList"></div>
+      </section>
+      <section class="getstarted">
+        <h2>Get started</h2>
+        <button class="action" id="actOpen">
+          <svg><use href="#i-folder-open"/></svg>
+          <span><b>Open a script</b><span>Open a .lua file from your computer</span></span>
+        </button>
+        <button class="action" id="actNew">
+          <svg><use href="#i-file-plus"/></svg>
+          <span><b>Create a new script</b><span>Start with an empty Script.lua in the editor</span></span>
+        </button>
+        <button class="action" id="actInject">
+          <svg><use href="#i-syringe"/></svg>
+          <span><b>Inject into a game</b><span>Start Coin Run, or your game in Data\Game, and attach the executor</span></span>
+        </button>
+        <button class="action" id="actData">
+          <svg><use href="#i-folder"/></svg>
+          <span><b>Open the Data folder</b><span>Your scripts, images and games live here</span></span>
+        </button>
+        <button class="continue" id="actContinue">Continue without code <span aria-hidden="true">→</span></button>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="window" id="ide" hidden>
   <header class="titlebar">
     <button class="press-me" id="pressMe">Press me</button>
-    <div class="drag" id="dragRegion"></div>
+    <button class="title-btn" id="homeBtn" title="Start window"><svg><use href="#i-home"/></svg></button>
+    <div class="drag" data-drag></div>
     <div class="wincontrols">
-      <button id="winMin" aria-label="Minimize"><svg><use href="#i-min"/></svg></button>
-      <button id="winMax" aria-label="Maximize"><svg><use href="#i-max"/></svg></button>
-      <button id="winClose" class="close" aria-label="Close"><svg><use href="#i-x"/></svg></button>
+      <button data-win="min" aria-label="Minimize"><svg><use href="#i-min"/></svg></button>
+      <button data-win="max" aria-label="Maximize"><svg><use href="#i-max"/></svg></button>
+      <button data-win="close" class="close" aria-label="Close"><svg><use href="#i-x"/></svg></button>
     </div>
   </header>
 

@@ -18,8 +18,24 @@ jobs:
       - run: npx neu update
       - run: npx neu build --release
       - run: node tools/package.js
+
+      - name: Install Inno Setup if it's missing
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup -y --no-progress
+          }
+      - name: Build VeniseSetup.exe
+        shell: pwsh
+        run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\venise.iss'
+
       - uses: actions/upload-artifact@v4
         with:
-          name: Venise
-          path: release/
+          name: VeniseSetup
+          path: release/installer/VeniseSetup.exe
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Venise-portable
+          path: release/portable/
           if-no-files-found: error

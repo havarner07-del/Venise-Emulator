@@ -14,7 +14,7 @@
     ? exePath.slice(0, exePath.lastIndexOf("/"))
     : (window.NL_PATH || ".").replace(/\\/g, "/");
   const data = root + "/Data";
-  const dirs = { scripts: data + "/Scripts", images: data + "/Images", game: data + "/Game" };
+  const dirs = { data, scripts: data + "/Scripts", images: data + "/Images", game: data + "/Game" };
   const SCRIPT_EXT = /\.(lua|luau|txt)$/i;
   const IMAGE_TYPES = { png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp", bmp: "image/bmp" };
   const IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp)$/i;
@@ -46,6 +46,13 @@
       return [];
     }
   }
+
+  // Window size for each screen, like Visual Studio: small splash, then the start window, then the full editor.
+  const LAYOUTS = {
+    splash: { width: 600, height: 340, minWidth: 600, minHeight: 340, maxWidth: 600, maxHeight: 340, resizable: false },
+    start: { width: 1000, height: 640, minWidth: 820, minHeight: 540, maxWidth: 10000, maxHeight: 10000, resizable: true },
+    ide: { width: 1200, height: 760, minWidth: 860, minHeight: 560, maxWidth: 10000, maxHeight: 10000, resizable: true },
+  };
 
   let lastImageUrl = null;
   let onWindowState = () => {};
@@ -111,7 +118,17 @@
       else await N.os.open("file://" + dir);
     },
 
+    // Files passed on the command line, e.g. when a .lua file is opened with Venise from Explorer.
+    launchFiles: (window.NL_ARGS || []).slice(1).filter(a => !a.startsWith("--") && SCRIPT_EXT.test(a)),
+
     win: {
+      async layout(name) {
+        const size = LAYOUTS[name];
+        if (!size) return;
+        if (await N.window.isMaximized()) { await N.window.unmaximize(); onWindowState(false); }
+        await N.window.setSize(size);
+        await N.window.center();
+      },
       min: () => N.window.minimize(),
       async max() {
         if (await N.window.isMaximized()) { await N.window.unmaximize(); onWindowState(false); }
@@ -124,10 +141,12 @@
 
   N.events.on("windowClose", () => N.app.exit());
 
-  // The window has no system title bar, so the empty part of ours drags it (double-click maximizes).
-  const drag = document.getElementById("dragRegion");
-  if (drag) {
-    N.window.setDraggableRegion(drag).catch(() => {});
-    drag.addEventListener("dblclick", () => window.venise.win.max());
-  }
+  // The window has no system title bar, so the empty parts of ours drag it (double-click maximizes).
+  document.querySelectorAll("[data-drag]").forEach(el => {
+    N.window.setDraggableRegion(el).catch(() => {});
+    el.addEventListener("dblclick", () => window.venise.win.max());
+  });
+  // The splash can be dragged anywhere.
+  const splash = document.getElementById("splash");
+  if (splash) N.window.setDraggableRegion(splash).catch(() => {});
 })();

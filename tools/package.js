@@ -1,6 +1,6 @@
 // Turns the `neu build` output into a ready-to-play folder, laid out like a game install:
 //
-//   release/Venise/
+//   release/portable/Venise/
 //     Venise.exe          <- double-click this
 //     resources.neu       <- the app's UI (must stay next to Venise.exe)
 //     Data/Scripts/       <- your .lua scripts
@@ -12,7 +12,7 @@ const path = require("path");
 
 const root = path.join(__dirname, "..");
 const dist = path.join(root, "dist");
-const out = path.join(root, "release", "Venise");
+const out = path.join(root, "release", "portable", "Venise");
 
 function findFile(dir, test) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {

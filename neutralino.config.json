@@ -26,10 +26,8 @@
   "modes": {
     "window": {
       "title": "Venise",
-      "width": 1200,
-      "height": 760,
-      "minWidth": 860,
-      "minHeight": 560,
+      "width": 600,
+      "height": 340,
       "center": true,
       "fullScreen": false,
       "alwaysOnTop": false,
@@ -38,7 +36,7 @@
       "borderless": true,
       "maximize": false,
       "hidden": false,
-      "resizable": true,
+      "resizable": false,
       "exitProcessOnClose": true
     }
   },

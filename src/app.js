@@ -15,8 +15,11 @@ const api = window.venise || {
   randomImage: async () => ({ folder: "images", image: null }),
   loadGame: async () => null,
   openFolder: async () => {},
-  win: { min() {}, max() {}, close() {}, onState() {} },
+  launchFiles: [],
+  win: { min() {}, max() {}, close() {}, onState() {}, layout: async () => {} },
 };
+const baseName = p => p.split(/[\\/]/).pop();
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 /* ---------------- built-in content ---------------- */
 const DEMO_GAME = `-- Coin Run: Venise's built-in demo game.
@@ -295,8 +298,7 @@ function renderSidebar() {
   const shown = folderScripts.filter(s => match(s.name));
   for (const s of shown) {
     folder.append(makeItem(s.name, "i-file", "file", async () => {
-      try { openTab({ name: s.name, code: await api.readFile(s.path), path: s.path }); }
-      catch (err) { log("err", `Couldn't open ${s.name}: ${err.message}`); }
+      await openPath(s.path);
     }));
   }
   if (!shown.length) {
@@ -329,13 +331,14 @@ $("#folderBtn").onclick = () => api.openFolder("scripts");
 $("#clearBtn").onclick = () => { ed.value = ""; ed.dispatchEvent(new Event("input")); ed.focus(); };
 $("#openBtn").onclick = async () => {
   const f = await api.openFile();
-  if (f) { openTab(f); log("sys", `Opened ${f.name}`); }
+  if (f) { openTab(f); addRecent(f.path); log("sys", `Opened ${f.name}`); }
 };
 async function saveCurrent(saveAs) {
   const t = cur();
   const r = await api.saveFile({ path: t.path, name: t.name, code: t.code, saveAs });
   if (!r) { if (!window.venise) log("warn", "Saving needs the desktop app."); return; }
   t.path = r.path; t.name = r.name; t.saved = t.code;
+  addRecent(r.path);
   renderTabs(); persist();
   $("#fileName").textContent = t.name;
   log("ok", `Saved ${r.path}`);
@@ -552,6 +555,7 @@ function frame(now) {
 const KEYS = { ArrowLeft: 0, ArrowRight: 1, ArrowUp: 2, ArrowDown: 3, z: 4, c: 4, x: 5, v: 5 };
 const typing = () => /^(TEXTAREA|INPUT)$/.test(document.activeElement && document.activeElement.tagName);
 addEventListener("keydown", e => {
+  if (view !== "ide") return;
   const mod = e.ctrlKey || e.metaKey;
   if (mod && e.key === "Enter") { e.preventDefault(); execute(); return; }
   if (mod && e.key.toLowerCase() === "s") { e.preventDefault(); saveCurrent(e.shiftKey); return; }
@@ -607,10 +611,12 @@ $("#imgFolderBtn").onclick = () => api.openFolder("images");
 modal.addEventListener("mousedown", e => { if (e.target === modal) closeModal(); });
 
 /* ---------------- window + theme ---------------- */
-$("#winMin").onclick = () => api.win.min();
-$("#winMax").onclick = () => api.win.max();
-$("#winClose").onclick = () => api.win.close();
-api.win.onState(max => { $("#winMax use").setAttribute("href", max ? "#i-restore" : "#i-max"); });
+document.querySelectorAll("[data-win]").forEach(b => {
+  b.onclick = () => api.win[b.dataset.win]();
+});
+api.win.onState(max => {
+  document.querySelectorAll('[data-win="max"] use').forEach(u => u.setAttribute("href", max ? "#i-restore" : "#i-max"));
+});
 
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
@@ -619,10 +625,132 @@ function applyTheme(t) {
 }
 $("#themeBtn").onclick = () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
 
+/* ---------------- recent files ---------------- */
+let recent = store.get("venise.recent", []);
+if (!Array.isArray(recent)) recent = [];
+function addRecent(path) {
+  if (!path) return;
+  recent = [{ path, time: Date.now() }, ...recent.filter(r => r.path !== path)].slice(0, 25);
+  store.set("venise.recent", recent);
+}
+function removeRecent(path) {
+  recent = recent.filter(r => r.path !== path);
+  store.set("venise.recent", recent);
+}
+async function openPath(path) {
+  try {
+    openTab({ name: baseName(path), code: await api.readFile(path), path });
+    addRecent(path);
+    return true;
+  } catch (err) {
+    log("err", `Couldn't open ${path}: ${(err && err.message) || err}`);
+    removeRecent(path);
+    return false;
+  }
+}
+function formatWhen(time) {
+  const d = new Date(time), today = new Date();
+  const sameDay = d.toDateString() === today.toDateString();
+  const clock = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return sameDay ? clock : d.toLocaleDateString() + " " + clock;
+}
+function renderRecent() {
+  const q = $("#recentSearch").value.trim().toLowerCase();
+  const list = $("#recentList");
+  list.textContent = "";
+  const items = recent.filter(r => !q || r.path.toLowerCase().includes(q));
+  if (!items.length) {
+    const p = document.createElement("div");
+    p.className = "recent-empty";
+    p.textContent = q ? "No recent files match that search." : "Scripts you open or save show up here, so you can jump back into them.";
+    list.append(p);
+    return;
+  }
+  const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
+  const groupOf = t => t >= midnight.getTime() ? "Today" : t >= midnight.getTime() - 6 * 864e5 ? "This week" : "Older";
+  let group = null;
+  for (const r of items) {
+    const g = groupOf(r.time);
+    if (g !== group) {
+      group = g;
+      const h = document.createElement("div");
+      h.className = "recent-group"; h.textContent = g;
+      list.append(h);
+    }
+    const b = document.createElement("button");
+    b.className = "recent-item";
+    b.title = r.path;
+    b.innerHTML = '<svg><use href="#i-lua"/></svg><span><b></b><span class="path"></span></span><time></time>';
+    b.querySelector("b").textContent = baseName(r.path);
+    b.querySelector(".path").textContent = r.path.slice(0, r.path.length - baseName(r.path).length).replace(/[\\/]$/, "");
+    b.querySelector("time").textContent = formatWhen(r.time);
+    b.onclick = async () => {
+      if (await openPath(r.path)) return showView("ide");
+      const note = $("#startNote");
+      note.textContent = `Couldn't open ${baseName(r.path)}. It may have been moved or deleted, so it was removed from the list.`;
+      note.hidden = false;
+      renderRecent();
+    };
+    list.append(b);
+  }
+}
+$("#recentSearch").addEventListener("input", renderRecent);
+
+/* ---------------- views: splash, start window, editor ---------------- */
+const views = { splash: $("#splash"), start: $("#start"), ide: $("#ide") };
+let view = "splash";
+async function showView(name) {
+  if (name === view) return;
+  try { await api.win.layout(name); } catch {}
+  for (const [k, el] of Object.entries(views)) el.hidden = k !== name;
+  view = name;
+  if (name === "start") { $("#startNote").hidden = true; renderRecent(); }
+  if (name === "ide") refreshEditor();
+}
+
+$("#actOpen").onclick = async () => {
+  const f = await api.openFile();
+  if (!f) return;
+  openTab(f); addRecent(f.path);
+  showView("ide");
+};
+$("#actNew").onclick = async () => {
+  openTab({ name: "Script.lua", code: "" });
+  await showView("ide");
+  ed.focus();
+};
+$("#actInject").onclick = async () => {
+  await showView("ide");
+  if (!running) inject();
+};
+$("#actData").onclick = () => api.openFolder("data");
+$("#actContinue").onclick = () => showView("ide");
+$("#homeBtn").onclick = () => showView("start");
+
 /* ---------------- boot ---------------- */
 applyTheme(store.get("venise.theme", "dark"));
 g.imageSmoothingEnabled = false;
 select(active);
-refreshScripts(false);
-log("sys", F ? "Venise ready. Press Inject to start the game, then Execute your script." : "The Lua runtime (src/vendor/fengari-web.js) is missing. Reinstall Venise.");
+
+(async function boot() {
+  const started = performance.now();
+  const bar = $("#splashBar"), status = $("#splashStatus");
+  const step = async (text, pct) => { status.textContent = text; bar.style.width = pct + "%"; await sleep(260); };
+
+  await step("Starting the Lua 5.3 runtime", 20);
+  await step("Loading scripts", 50);
+  await refreshScripts(false);
+  await step("Reading recent files", 75);
+  renderRecent();
+  await step("Preparing the workspace", 100);
+  const left = 1600 - (performance.now() - started);
+  if (left > 0) await sleep(left);
+
+  log("sys", F ? "Venise ready. Press Inject to start the game, then Execute your script." : "The Lua runtime (src/vendor/fengari-web.js) is missing. Reinstall Venise.");
+
+  // Opened by double-clicking a .lua file: go straight to the editor, like Visual Studio does for a project.
+  let opened = false;
+  for (const p of api.launchFiles || []) opened = (await openPath(p)) || opened;
+  showView(opened ? "ide" : "start");
+})();
 })();
