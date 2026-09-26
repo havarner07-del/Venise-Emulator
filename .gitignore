@@ -1,4 +1,8 @@
 node_modules/
+bin/
 dist/
-images/*
-!images/README.txt
+release/
+Data/
+.tmp/
+src/js/neutralino.js
+src/js/neutralino.d.ts

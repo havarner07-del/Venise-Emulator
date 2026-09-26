@@ -457,7 +457,7 @@ function scheduleCheck(delay) {
 }
 $("#compileBtn").onclick = () => {
   const t = cur();
-  if (!F) { log("err", "The Lua runtime (fengari) is missing. Run npm install, then restart Venise."); return; }
+  if (!F) { log("err", "The Lua runtime (src/vendor/fengari-web.js) is missing. Reinstall Venise."); return; }
   const err = syntaxError(t.code, t.name);
   if (err) { log("err", "Compile failed: " + err); scheduleCheck(0); return; }
   const lines = t.code.split("\n").length;
@@ -477,7 +477,7 @@ function setInjected(on, label) {
 }
 function stop() { running = false; cancelAnimationFrame(raf); }
 async function inject() {
-  if (!F) { log("err", "The Lua runtime (fengari) is missing. Run npm install, then restart Venise."); return; }
+  if (!F) { log("err", "The Lua runtime (src/vendor/fengari-web.js) is missing. Reinstall Venise."); return; }
   stop();
   const custom = await api.loadGame();
   const game = custom || { name: "Coin Run", code: DEMO_GAME };
@@ -624,5 +624,5 @@ applyTheme(store.get("venise.theme", "dark"));
 g.imageSmoothingEnabled = false;
 select(active);
 refreshScripts(false);
-log("sys", F ? "Venise ready. Press Inject to start the game, then Execute your script." : "The Lua runtime is missing. Run npm install.");
+log("sys", F ? "Venise ready. Press Inject to start the game, then Execute your script." : "The Lua runtime (src/vendor/fengari-web.js) is missing. Reinstall Venise.");
 })();

@@ -1,4 +1,4 @@
-name: Build Venise.exe
+name: Build Venise
 
 on:
   push:
@@ -15,9 +15,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx electron-builder --win portable --publish never
+      - run: npx neu update
+      - run: npx neu build --release
+      - run: node tools/package.js
       - uses: actions/upload-artifact@v4
         with:
-          name: Venise-windows
-          path: dist/Venise.exe
+          name: Venise
+          path: release/
           if-no-files-found: error

@@ -2,8 +2,9 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval'; connect-src 'self' ws://127.0.0.1:* ws://localhost:*">
 <title>Venise</title>
+<link rel="icon" href="icon.png">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -35,7 +36,7 @@
 <div class="window">
   <header class="titlebar">
     <button class="press-me" id="pressMe">Press me</button>
-    <div class="drag"></div>
+    <div class="drag" id="dragRegion"></div>
     <div class="wincontrols">
       <button id="winMin" aria-label="Minimize"><svg><use href="#i-min"/></svg></button>
       <button id="winMax" aria-label="Maximize"><svg><use href="#i-max"/></svg></button>
@@ -134,7 +135,9 @@
   </div>
 </div>
 
-<script src="../node_modules/fengari-web/dist/fengari-web.js"></script>
+<script src="vendor/fengari-web.js"></script>
+<script src="js/neutralino.js"></script>
+<script src="js/native.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://raw.githubusercontent.com/neutralinojs/neutralinojs/main/schemas/neutralino.config.schema.json",
+  "applicationId": "com.venise.executor",
+  "applicationName": "Venise",
+  "version": "1.0.0",
+  "defaultMode": "window",
+  "port": 0,
+  "documentRoot": "/src/",
+  "url": "/",
+  "enableServer": true,
+  "enableNativeAPI": true,
+  "injectGlobals": true,
+  "tokenSecurity": "one-time",
+  "logging": {
+    "enabled": false,
+    "writeToLogFile": false
+  },
+  "nativeAllowList": [
+    "app.*",
+    "os.*",
+    "window.*",
+    "filesystem.*",
+    "events.*",
+    "debug.log"
+  ],
+  "modes": {
+    "window": {
+      "title": "Venise",
+      "width": 1200,
+      "height": 760,
+      "minWidth": 860,
+      "minHeight": 560,
+      "center": true,
+      "fullScreen": false,
+      "alwaysOnTop": false,
+      "icon": "/src/icon.png",
+      "enableInspector": false,
+      "borderless": true,
+      "maximize": false,
+      "hidden": false,
+      "resizable": true,
+      "exitProcessOnClose": true
+    }
+  },
+  "cli": {
+    "binaryName": "Venise",
+    "resourcesPath": "/src/",
+    "extensionsPath": "/extensions/",
+    "clientLibrary": "/src/js/neutralino.js",
+    "binaryVersion": "6.9.0",
+    "clientVersion": "6.9.0"
+  }
+}

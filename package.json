@@ -1,31 +1,17 @@
 {
   "name": "venise",
-  "productName": "Venise",
   "version": "1.0.0",
   "description": "Venise Lua executor and emulator workbench",
-  "main": "main.js",
-  "author": "havarner07-del",
+  "private": true,
   "license": "MIT",
   "scripts": {
-    "start": "electron .",
-    "dist": "electron-builder --win portable"
-  },
-  "dependencies": {
-    "fengari-web": "0.1.4"
+    "setup": "neu update",
+    "start": "neu run",
+    "build": "neu build --release && node tools/package.js"
   },
   "devDependencies": {
-    "electron": "^44.4.5",
-    "electron-builder": "^26.15.3"
-  },
-  "build": {
-    "appId": "com.venise.executor",
-    "productName": "Venise",
-    "directories": { "output": "dist" },
-    "files": ["main.js", "preload.js", "src/**", "node_modules/fengari-web/dist/**", "package.json"],
-    "win": {
-      "target": "portable",
-      "icon": "build/icon.png",
-      "artifactName": "Venise.exe"
-    }
+    "@neutralinojs/neu": "^11.7.2",
+    "png-to-ico": "^3.0.2",
+    "rcedit": "^5.0.2"
   }
 }
